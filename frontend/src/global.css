@@ -1,0 +1,249 @@
+
+/* ----- Color Palette ----- */
+:root {
+  /* Backgrounds */
+  --bg-primary: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #111111;
+
+  /* Text — warm off-whites for comfortable reading on black */
+  --text-primary: #f5f5f5; /* Headings & primary content */
+  --text-secondary: #f7f7f2; /* Body / paragraphs */
+  --text-tertiary: #fafaf8; /* Subtle / captions */
+  --text-muted: rgba(245, 245, 245, 0.6);
+
+  /* Accent (re-use as needed) */
+  --accent: #03b3c3;
+  --accent-hover: #0e5ea5;
+
+  /* Font families */
+  --font-heading: "Bricolage Grotesque", sans-serif;
+  --font-body: "Quicksand", sans-serif;
+}
+
+/* ----- Global Reset & Base ----- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px; /* 1rem = 16px */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-optical-sizing: auto;
+  font-style: normal;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+}
+
+/* ----- Typography Scale ----- */
+
+/* ── Primary Heading (h1) ── */
+h1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-primary);
+  font-size: clamp(2.5rem, 5vw + 1rem, 4.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5em;
+}
+
+/* ── Secondary Heading (h2) ── */
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 3.5vw + 0.5rem, 3.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.5em;
+}
+
+/* ── Tertiary Heading (h3) ── */
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 2.5vw + 0.25rem, 2.25rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4em;
+}
+
+/* ── Sub-headings (h4–h6) ── */
+h4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-secondary);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.35;
+  margin-bottom: 0.4em;
+}
+
+h5 {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-secondary);
+  font-size: clamp(1.1rem, 1.5vw, 1.4rem);
+  line-height: 1.4;
+  margin-bottom: 0.35em;
+}
+
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.3em;
+}
+
+/* ── Paragraphs ── */
+p {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-optical-sizing: auto;
+  font-style: normal;
+  color: var(--text-secondary);
+  font-size: clamp(1rem, 1.1vw, 1.125rem);
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  margin-bottom: 1.25em;
+  max-width: 70ch; /* Optimal reading width */
+}
+
+/* ── Small / Caption text ── */
+small,
+.caption {
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+/* ── Strong / Bold ── */
+strong,
+b {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Links ── */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* ── Lists ── */
+ul,
+ol {
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.75;
+  padding-left: 1.5em;
+  margin-bottom: 1.25em;
+}
+
+li + li {
+  margin-top: 0.35em;
+}
+
+/* ── Blockquote ── */
+blockquote {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-tertiary);
+  font-size: 1.125rem;
+  line-height: 1.7;
+  border-left: 3px solid var(--accent);
+  padding-left: 1.25em;
+  margin: 1.5em 0;
+}
+
+/* ── Code ── */
+code {
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.9em;
+  background: var(--bg-elevated);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+pre {
+  background: var(--bg-elevated);
+  padding: 1.25em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1.5em;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+/* ── Utility classes ── */
+.text-primary {
+  color: var(--text-primary);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+.text-muted {
+  color: var(--text-muted);
+}
+.font-heading {
+  font-family: var(--font-heading);
+}
+.font-body {
+  font-family: var(--font-body);
+}
