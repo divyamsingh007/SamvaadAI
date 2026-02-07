@@ -215,7 +215,7 @@ export default function Home() {
         <div style={{ marginTop: "2rem", pointerEvents: "auto" }}>
           <CtaButton
             text="Begin Mock Interview Now"
-            onClick={() => navigate("/interview")}
+            onClick={() => navigate("/pre-interview")}
           />
         </div>
 
