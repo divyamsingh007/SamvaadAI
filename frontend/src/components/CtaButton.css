@@ -1,0 +1,52 @@
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.9em 2.4em;
+  font-family: "Quicksand", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #03b3c3;
+  background: transparent;
+  border: 1.5px solid #03b3c3;
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    opacity 0.25s ease,
+    transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cta-btn:hover {
+  transform: scale(1.05);
+}
+
+.cta-btn__arrow {
+  display: inline-flex;
+  align-items: center;
+  width: 20px;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cta-btn__arrow svg {
+  flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cta-btn:hover .cta-btn__arrow {
+  width: 32px;
+}
+
+.cta-btn:hover .cta-btn__arrow svg {
+  transform: translateX(4px);
+}
+
+.cta-btn:hover {
+  opacity: 0.85;
+}
+
+.cta-btn:active {
+  opacity: 0.6;
+}

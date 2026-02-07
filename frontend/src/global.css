@@ -1,27 +1,20 @@
-
-/* ----- Color Palette ----- */
 :root {
-  /* Backgrounds */
   --bg-primary: #000000;
   --bg-surface: #0a0a0a;
   --bg-elevated: #111111;
 
-  /* Text — warm off-whites for comfortable reading on black */
-  --text-primary: #f5f5f5; /* Headings & primary content */
-  --text-secondary: #f7f7f2; /* Body / paragraphs */
-  --text-tertiary: #fafaf8; /* Subtle / captions */
+  --text-primary: #f5f5f5;
+  --text-secondary: #f7f7f2;
+  --text-tertiary: #fafaf8;
   --text-muted: rgba(245, 245, 245, 0.6);
 
-  /* Accent (re-use as needed) */
   --accent: #03b3c3;
   --accent-hover: #0e5ea5;
 
-  /* Font families */
   --font-heading: "Bricolage Grotesque", sans-serif;
   --font-body: "Quicksand", sans-serif;
 }
 
-/* ----- Global Reset & Base ----- */
 *,
 *::before,
 *::after {
@@ -31,7 +24,7 @@
 }
 
 html {
-  font-size: 16px; /* 1rem = 16px */
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -50,9 +43,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ----- Typography Scale ----- */
-
-/* ── Primary Heading (h1) ── */
 h1 {
   font-family: var(--font-heading);
   font-weight: 800;
@@ -66,7 +56,6 @@ h1 {
   margin-bottom: 0.5em;
 }
 
-/* ── Secondary Heading (h2) ── */
 h2 {
   font-family: var(--font-heading);
   font-weight: 700;
@@ -80,7 +69,6 @@ h2 {
   margin-bottom: 0.5em;
 }
 
-/* ── Tertiary Heading (h3) ── */
 h3 {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -94,7 +82,6 @@ h3 {
   margin-bottom: 0.4em;
 }
 
-/* ── Sub-headings (h4–h6) ── */
 h4 {
   font-family: var(--font-heading);
   font-weight: 600;
@@ -127,7 +114,6 @@ h6 {
   margin-bottom: 0.3em;
 }
 
-/* ── Paragraphs ── */
 p {
   font-family: var(--font-body);
   font-weight: 400;
@@ -138,10 +124,9 @@ p {
   line-height: 1.75;
   letter-spacing: 0.01em;
   margin-bottom: 1.25em;
-  max-width: 70ch; /* Optimal reading width */
+  max-width: 70ch;
 }
 
-/* ── Small / Caption text ── */
 small,
 .caption {
   font-family: var(--font-body);
@@ -152,14 +137,12 @@ small,
   letter-spacing: 0.02em;
 }
 
-/* ── Strong / Bold ── */
 strong,
 b {
   font-weight: 700;
   color: var(--text-primary);
 }
 
-/* ── Links ── */
 a {
   color: var(--accent);
   text-decoration: none;
@@ -171,7 +154,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ── Lists ── */
 ul,
 ol {
   font-family: var(--font-body);
@@ -186,7 +168,6 @@ li + li {
   margin-top: 0.35em;
 }
 
-/* ── Blockquote ── */
 blockquote {
   font-family: var(--font-body);
   font-weight: 500;
@@ -199,7 +180,6 @@ blockquote {
   margin: 1.5em 0;
 }
 
-/* ── Code ── */
 code {
   font-family: "Fira Code", "Cascadia Code", monospace;
   font-size: 0.9em;
@@ -222,13 +202,11 @@ pre code {
   padding: 0;
 }
 
-/* ── Selection ── */
 ::selection {
   background: var(--accent);
   color: var(--bg-primary);
 }
 
-/* ── Utility classes ── */
 .text-primary {
   color: var(--text-primary);
 }

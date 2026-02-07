@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Hyperspeed from "../components/Hyperspeed";
 import Dock from "../components/Dock";
+import CtaButton from "../components/CtaButton";
 
 const HomeIcon = () => (
   <svg
@@ -81,7 +82,6 @@ export default function Home() {
         overflow: "hidden",
       }}
     >
-      {/* Hyperspeed fullscreen background */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Hyperspeed
           effectOptions={{
@@ -126,6 +126,38 @@ export default function Home() {
 
       <div
         style={{
+          position: "absolute",
+          top: "1.5rem",
+          left: "2rem",
+          zIndex: 10,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: '"Bricolage Grotesque", sans-serif',
+            fontSize: "2rem",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            color: "#F5F5F5",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.15em",
+          }}
+        >
+          Samvaad
+          <span
+            style={{
+              color: "#03b3c3",
+              fontWeight: 800,
+            }}
+          >
+            AI
+          </span>
+        </span>
+      </div>
+
+      <div
+        style={{
           position: "relative",
           zIndex: 1,
           display: "flex",
@@ -135,15 +167,73 @@ export default function Home() {
           height: "100%",
           color: "white",
           textAlign: "center",
-          pointerEvents: "none",
+          padding: "0 1.5rem",
         }}
       >
-        <h1>Welcome</h1>
-        <p>Your landing page starts here</p>
+        <h1
+          style={{
+            fontFamily: '"Bricolage Grotesque", sans-serif',
+            fontWeight: 800,
+            fontSize: "clamp(2.5rem, 5vw + 0.5rem, 4.5rem)",
+            lineHeight: 1.08,
+            letterSpacing: "-0.03em",
+            color: "#F5F5F5",
+            maxWidth: "800px",
+            margin: 0,
+          }}
+        >
+          Elevate Your Interview
+          <br />
+          Preparation With{" "}
+          <span
+            style={{
+              background: "linear-gradient(135deg, #03b3c3, #6750a2)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            SamvaadAI
+          </span>
+        </h1>
+
+        <p
+          style={{
+            fontFamily: '"Quicksand", sans-serif',
+            fontSize: "clamp(1rem, 1.2vw, 1.2rem)",
+            lineHeight: 1.7,
+            color: "rgba(247, 247, 242, 0.75)",
+            maxWidth: "580px",
+            marginTop: "1.5rem",
+            fontWeight: 400,
+          }}
+        >
+          Practice with realistic AI-generated questions, speak your answers
+          naturally, and receive structured, role-specific feedback — all in
+          minutes.
+        </p>
+
+        <div style={{ marginTop: "2rem", pointerEvents: "auto" }}>
+          <CtaButton
+            text="Begin Mock Interview Now"
+            onClick={() => navigate("/interview")}
+          />
+        </div>
+
+        <p
+          style={{
+            fontFamily: '"Quicksand", sans-serif',
+            fontSize: "0.8rem",
+            color: "rgba(245, 245, 245, 0.4)",
+            marginTop: "1rem",
+            fontWeight: 400,
+            letterSpacing: "0.02em",
+          }}
+        >
+          No signup required
+        </p>
       </div>
 
-      {/* Dock navigation */}
-      <Dock items={dockItems} />
+      <Dock className="z-10" items={dockItems} />
     </div>
   );
 }
