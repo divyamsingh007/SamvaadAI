@@ -331,7 +331,7 @@ export default function HowItWorks() {
           >
             <CtaButton
               text="Start Mock Interview"
-              onClick={() => navigate("/pre-interview")}
+              onClick={() => navigate("/pre-vapi-interview")}
             />
             <span
               style={{
