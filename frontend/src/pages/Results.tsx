@@ -4,9 +4,9 @@ import CtaButton from "../components/CtaButton";
 import { getInterviewResponse } from "../services/interviewResponse.service";
 
 const FALLBACK_DATA = {
-  score: 74,
+  score: 67,
   summary:
-    "You demonstrated solid communication skills and a clear understanding of your domain. Your answers were structured and showed self-awareness. With more specific examples and concise delivery, you can elevate your performance further.",
+    "You demonstrated solid communication skills and a reasonable understanding of your domain. Your answers showed self-awareness and structure. With more specific examples and concise delivery, you can elevate your performance further.",
   strengths: [
     "Clear and confident communication throughout the session.",
     "Good use of structured responses with logical flow.",
@@ -15,7 +15,7 @@ const FALLBACK_DATA = {
   ],
   improvements: [
     "Provide more specific, quantifiable examples from past experience.",
-    "Keep answers concise — aim for 60–90 seconds per response.",
+    "Aim for more comprehensive answers — 60 to 90 seconds per response.",
     "Strengthen technical depth when discussing projects and tools.",
     "Practice the STAR method for behavioral questions.",
   ],
@@ -111,12 +111,14 @@ export default function Results() {
   }, [id]);
 
   // Use fetched data or fallback to location state or default
-  const evaluationData = responseData?.evaluation || 
-                         (location.state as any)?.evaluation || 
-                         FALLBACK_DATA;
+  const evaluationData =
+    responseData?.evaluation ||
+    (location.state as any)?.evaluation ||
+    FALLBACK_DATA;
 
-  const interviewInfo = responseData?.interviewId || (location.state as any)?.interview;
-  
+  const interviewInfo =
+    responseData?.interviewId || (location.state as any)?.interview;
+
   // Map the data structure
   const data = {
     score: evaluationData.totalScore,
@@ -129,34 +131,42 @@ export default function Results() {
   const { score, summary, strengths, improvements, categoryScores } = data;
 
   const scoreColor =
-    score >= 80 ? "#03b3c3" : score >= 60 ? "rgba(245,245,245,0.7)" : "#c0392b";
+    score >= 75 ? "#03b3c3" : score >= 62 ? "rgba(245,245,245,0.7)" : "#e2a03f";
 
   if (loading) {
     return (
-      <div style={{
-        width: "100vw",
-        height: "100vh",
-        background: "#000",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-        gap: "1rem"
-      }}>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          border: "3px solid rgba(3,179,195,0.2)",
-          borderTop: "3px solid #03b3c3",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite"
-        }} />
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          background: "#000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "3px solid rgba(3,179,195,0.2)",
+            borderTop: "3px solid #03b3c3",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{
-          fontFamily: '"Quicksand", sans-serif',
-          color: "rgba(245,245,245,0.5)",
-          fontSize: "0.9rem"
-        }}>Loading results...</p>
+        <p
+          style={{
+            fontFamily: '"Quicksand", sans-serif',
+            color: "rgba(245,245,245,0.5)",
+            fontSize: "0.9rem",
+          }}
+        >
+          Loading results...
+        </p>
       </div>
     );
   }
@@ -287,17 +297,17 @@ export default function Results() {
             }}
           >
             {[
-              { range: "90–100", label: "Exceptional", color: "#03b3c3" },
-              { range: "80–89", label: "Strong", color: "#03b3c3" },
+              { range: "78–82", label: "Excellent", color: "#03b3c3" },
+              { range: "70–77", label: "Strong", color: "#03b3c3" },
               {
-                range: "60–79",
+                range: "62–69",
                 label: "Moderate",
                 color: "rgba(245,245,245,0.7)",
               },
-              { range: "40–59", label: "Developing", color: "#e2a03f" },
-              { range: "0–39", label: "Needs Work", color: "#c0392b" },
+              { range: "55–61", label: "Developing", color: "#e2a03f" },
+              { range: "50–54", label: "Needs Work", color: "#c0392b" },
             ].map(({ range, label, color }) => {
-              const [lo, hi] = range.split("–").map(Number);
+              const [lo, hi] = range.split("\u2013").map(Number);
               const isActive = score >= lo && score <= hi;
               return (
                 <div
@@ -358,23 +368,29 @@ export default function Results() {
 
           {/* Category Scores */}
           {categoryScores && categoryScores.length > 0 && (
-            <div style={{
-              marginTop: "2.5rem",
-              width: "100%",
-              maxWidth: "800px",
-            }}>
-              <h3 style={{
-                ...sectionTitle,
-                textAlign: "center",
-                marginBottom: "1.5rem",
-              }}>
+            <div
+              style={{
+                marginTop: "2.5rem",
+                width: "100%",
+                maxWidth: "800px",
+              }}
+            >
+              <h3
+                style={{
+                  ...sectionTitle,
+                  textAlign: "center",
+                  marginBottom: "1.5rem",
+                }}
+              >
                 Performance Breakdown
               </h3>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "1rem",
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: "1rem",
+                }}
+              >
                 {categoryScores.map((category: any, idx: number) => (
                   <div
                     key={idx}
@@ -385,36 +401,49 @@ export default function Results() {
                       borderRadius: "10px",
                     }}
                   >
-                    <div style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "0.5rem",
-                    }}>
-                      <span style={{
-                        fontFamily: '"Bricolage Grotesque", sans-serif',
-                        fontSize: "0.9rem",
-                        fontWeight: 600,
-                        color: "#03b3c3",
-                      }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: '"Bricolage Grotesque", sans-serif',
+                          fontSize: "0.9rem",
+                          fontWeight: 600,
+                          color: "#03b3c3",
+                        }}
+                      >
                         {category.name}
                       </span>
-                      <span style={{
-                        fontFamily: '"Bricolage Grotesque", sans-serif',
-                        fontSize: "1.1rem",
-                        fontWeight: 700,
-                        color: category.score >= 80 ? "#03b3c3" : category.score >= 60 ? "rgba(245,245,245,0.7)" : "#e2a03f",
-                      }}>
+                      <span
+                        style={{
+                          fontFamily: '"Bricolage Grotesque", sans-serif',
+                          fontSize: "1.1rem",
+                          fontWeight: 700,
+                          color:
+                            category.score >= 75
+                              ? "#03b3c3"
+                              : category.score >= 62
+                                ? "rgba(245,245,245,0.7)"
+                                : "#e2a03f",
+                        }}
+                      >
                         {category.score}/100
                       </span>
                     </div>
-                    <p style={{
-                      fontFamily: '"Quicksand", sans-serif',
-                      fontSize: "0.85rem",
-                      color: "rgba(245,245,245,0.55)",
-                      lineHeight: 1.5,
-                      margin: 0,
-                    }}>
+                    <p
+                      style={{
+                        fontFamily: '"Quicksand", sans-serif',
+                        fontSize: "0.85rem",
+                        color: "rgba(245,245,245,0.55)",
+                        lineHeight: 1.5,
+                        margin: 0,
+                      }}
+                    >
                       {category.comment}
                     </p>
                   </div>

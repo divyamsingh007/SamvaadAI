@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import CtaButton from "../components/CtaButton";
+import { createInterview } from "../services/interview.service";
 
 const UploadIcon = () => (
   <svg
@@ -206,8 +207,16 @@ export default function PreInterview() {
   const [experience, setExperience] = useState("");
   const [focusArea, setFocusArea] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const isReady = resumeFile && role !== "";
+
+  const experienceToLevel: Record<string, string> = {
+    Fresher: "Junior",
+    "1-2 Years": "Junior",
+    "3-5 Years": "Mid-Level",
+    "5+ Years": "Senior",
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -218,17 +227,30 @@ export default function PreInterview() {
 
   const handleStart = async () => {
     if (!isReady) return;
+    setError("");
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("resume", resumeFile!);
-    formData.append("role", role);
-    if (experience) formData.append("experience", experience);
-    if (focusArea) formData.append("focusArea", focusArea);
+    try {
+      const response = await createInterview({
+        type: "Technical",
+        role,
+        level: experienceToLevel[experience] || "Mid-Level",
+        techstack: focusArea || role,
+        amount: 5,
+        userid: "698656a085972488d244dff3",
+      });
 
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    navigate("/interview");
+      if (response.success && response.data) {
+        const interviewId = response.data._id || response.data.id;
+        navigate(`/interview/${interviewId}`);
+      } else {
+        setError(response.message || "Failed to create interview");
+        setLoading(false);
+      }
+    } catch (err) {
+      setError("An error occurred while creating the interview");
+      setLoading(false);
+    }
   };
 
   return (
@@ -287,6 +309,24 @@ export default function PreInterview() {
         </div>
 
         <div className="pre-interview-content">
+          {error && (
+            <div
+              style={{
+                maxWidth: "640px",
+                width: "100%",
+                padding: "1rem",
+                marginBottom: "1.5rem",
+                background: "rgba(231,76,60,0.1)",
+                border: "1px solid rgba(231,76,60,0.3)",
+                borderRadius: "10px",
+                color: "#e74c3c",
+                fontFamily: '"Quicksand", sans-serif',
+                fontSize: "0.9rem",
+              }}
+            >
+              {error}
+            </div>
+          )}
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <h1
               style={{

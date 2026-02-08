@@ -6,6 +6,13 @@ import type { Interview } from "../types";
 
 const VAPI_PUBLIC_KEY = import.meta.env.VITE_VAPI_PUBLIC_KEY;
 
+export interface TranscriptEntry {
+  role: "assistant" | "user";
+  text: string;
+  isFinal: boolean;
+  timestamp: number;
+}
+
 export interface UseVapiOptions {
   interview: Interview;
   onCallStart?: () => void;
@@ -22,7 +29,7 @@ export interface UseVapiReturn {
   startCall: () => Promise<void>;
   stopCall: () => void;
   toggleMute: () => void;
-  transcript: string[];
+  transcript: TranscriptEntry[];
 }
 
 export function useVapi({
@@ -36,7 +43,7 @@ export function useVapi({
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState<string[]>([]);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
   const vapiRef = useRef<Vapi | null>(null);
 
@@ -65,9 +72,36 @@ export function useVapi({
     });
 
     vapi.on("message", (message) => {
-      // Add transcript if available
       if (message.type === "transcript") {
-        setTranscript((prev) => [...prev, message.text]);
+        const role: "assistant" | "user" =
+          message.role === "assistant" ? "assistant" : "user";
+        const text = message.transcript || message.text || "";
+        const isFinal = message.transcriptType === "final";
+
+        if (!text.trim()) return;
+
+        setTranscript((prev) => {
+          if (isFinal) {
+            const withoutPartial = prev.filter(
+              (e) => !(e.role === role && !e.isFinal),
+            );
+            return [
+              ...withoutPartial,
+              { role, text, isFinal: true, timestamp: Date.now() },
+            ];
+          } else {
+            const idx = prev.findIndex((e) => e.role === role && !e.isFinal);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], text };
+              return updated;
+            }
+            return [
+              ...prev,
+              { role, text, isFinal: false, timestamp: Date.now() },
+            ];
+          }
+        });
       }
       onMessage?.(message);
     });
@@ -106,10 +140,11 @@ export function useVapi({
                 ? [
                     {
                       role: "system",
-                      content: interviewerConfig.model.messages[0]?.content?.replace(
-                        "{{questions}}",
-                        questionsText
-                      ) || "",
+                      content:
+                        interviewerConfig.model.messages[0]?.content?.replace(
+                          "{{questions}}",
+                          questionsText,
+                        ) || "",
                     },
                   ]
                 : [],
@@ -119,7 +154,8 @@ export function useVapi({
 
       await vapiRef.current.start(assistantConfig);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error("Failed to start call");
+      const error =
+        err instanceof Error ? err : new Error("Failed to start call");
       setError(error.message);
       setIsLoading(false);
       onError?.(error);

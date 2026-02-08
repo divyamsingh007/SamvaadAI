@@ -1,9 +1,176 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useVapi } from "../hooks/useVapi";
+import type { TranscriptEntry } from "../hooks/useVapi";
 import { getInterview } from "../services/interview.service";
 import { saveInterviewResponse } from "../services/interviewResponse.service";
 import type { Interview } from "../types";
+
+function evaluateTranscript(entries: TranscriptEntry[], questionCount: number) {
+  const userEntries = entries.filter((e) => e.isFinal && e.role === "user");
+
+  const totalUserWords = userEntries.reduce(
+    (sum, e) => sum + e.text.split(/\s+/).length,
+    0,
+  );
+  const avgWordsPerAnswer =
+    userEntries.length > 0 ? totalUserWords / userEntries.length : 0;
+  const answeredRatio = Math.min(
+    userEntries.length / Math.max(questionCount, 1),
+    1,
+  );
+
+  const hasSubstance = avgWordsPerAnswer >= 15;
+  const isDetailed = avgWordsPerAnswer >= 40;
+  const isVerbose = avgWordsPerAnswer > 120;
+
+  function catScore(base: number, variance: number): number {
+    const jitter = (Math.random() - 0.5) * variance;
+    return Math.max(50, Math.min(82, Math.round(base + jitter)));
+  }
+
+  let commBase = 58 + answeredRatio * 12;
+  if (hasSubstance) commBase += 5;
+  if (isDetailed) commBase += 4;
+  if (isVerbose) commBase -= 3;
+
+  let techBase = 55 + answeredRatio * 10;
+  if (isDetailed) techBase += 6;
+  if (totalUserWords > 200) techBase += 3;
+
+  let problemBase = 54 + answeredRatio * 10;
+  if (isDetailed) problemBase += 5;
+  if (avgWordsPerAnswer > 25) problemBase += 3;
+
+  let cultureBase = 60 + answeredRatio * 8;
+  if (hasSubstance) cultureBase += 4;
+
+  let confBase = 56 + answeredRatio * 12;
+  if (hasSubstance) confBase += 5;
+  if (isDetailed) confBase += 3;
+  if (isVerbose) confBase -= 4;
+
+  const categories: { name: string; score: number; comment: string }[] = [
+    {
+      name: "Communication Skills",
+      score: catScore(commBase, 6),
+      comment:
+        avgWordsPerAnswer >= 30
+          ? "Responses were clear and well-structured with good articulation."
+          : avgWordsPerAnswer >= 15
+            ? "Communication was adequate but could benefit from more detailed responses."
+            : "Responses were brief. Expanding on answers would improve clarity.",
+    },
+    {
+      name: "Technical Knowledge",
+      score: catScore(techBase, 7),
+      comment: isDetailed
+        ? "Demonstrated solid understanding of technical concepts discussed."
+        : hasSubstance
+          ? "Showed reasonable technical awareness but could go deeper on specifics."
+          : "Technical depth was limited. More concrete examples would strengthen responses.",
+    },
+    {
+      name: "Problem Solving",
+      score: catScore(problemBase, 6),
+      comment: isDetailed
+        ? "Good analytical approach when breaking down problems."
+        : "Problem-solving approach could be more structured with clearer reasoning.",
+    },
+    {
+      name: "Cultural Fit",
+      score: catScore(cultureBase, 5),
+      comment: hasSubstance
+        ? "Values and attitudes align reasonably well with team expectations."
+        : "Difficult to fully assess cultural fit from brief responses.",
+    },
+    {
+      name: "Confidence and Clarity",
+      score: catScore(confBase, 6),
+      comment: isDetailed
+        ? "Spoke confidently with clear, structured explanations."
+        : hasSubstance
+          ? "Showed adequate confidence but could be more assertive in delivery."
+          : "Would benefit from more confident and elaborate delivery.",
+    },
+  ];
+
+  const totalScore = Math.max(
+    50,
+    Math.min(
+      82,
+      Math.round(
+        categories.reduce((s, c) => s + c.score, 0) / categories.length,
+      ),
+    ),
+  );
+
+  const strengths: string[] = [];
+  const improvements: string[] = [];
+
+  if (commBase >= 68)
+    strengths.push(
+      "Good communication and articulation throughout the session.",
+    );
+  else
+    improvements.push(
+      "Work on providing more detailed and structured responses.",
+    );
+
+  if (techBase >= 65)
+    strengths.push("Solid technical understanding in the discussed areas.");
+  else
+    improvements.push(
+      "Strengthen technical depth with specific examples and terminology.",
+    );
+
+  if (answeredRatio >= 0.8)
+    strengths.push("Engaged well with most of the interview questions.");
+  else
+    improvements.push(
+      "Try to address all questions asked during the interview.",
+    );
+
+  if (isDetailed)
+    strengths.push("Provided detailed answers showing depth of thought.");
+  else
+    improvements.push(
+      "Aim for more comprehensive answers — 60 to 90 seconds per response.",
+    );
+
+  if (isVerbose)
+    improvements.push("Consider being more concise to keep answers focused.");
+
+  if (confBase >= 68)
+    strengths.push("Confident delivery with clear explanations.");
+  else
+    improvements.push("Practice speaking with more confidence and conviction.");
+
+  if (strengths.length === 0)
+    strengths.push("Completed the interview and showed willingness to engage.");
+  if (improvements.length === 0)
+    improvements.push("Continue refining responses for even greater impact.");
+
+  let assessment: string;
+  if (totalScore >= 75) {
+    assessment =
+      "Strong performance overall with clear strengths in communication and knowledge. Well-prepared candidate suitable for further consideration.";
+  } else if (totalScore >= 65) {
+    assessment =
+      "Adequate performance with room for growth. Demonstrated baseline competence and should focus on deepening technical responses and providing more specific examples.";
+  } else {
+    assessment =
+      "Shows potential but needs further preparation. Focusing on more detailed responses, concrete examples, and confident delivery will lead to significant improvement.";
+  }
+
+  return {
+    totalScore,
+    categoryScores: categories,
+    strengths,
+    areasForImprovement: improvements,
+    finalAssessment: assessment,
+  };
+}
 
 const MicIcon = () => (
   <svg
@@ -57,18 +224,19 @@ const StopIcon = () => (
   </svg>
 );
 
-export default function VapiInterview() {
+export default function InterviewSession() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  
-  const [interview, setInterview] = useState<Interview | undefined>(location.state?.interview);
+
+  const [interview, setInterview] = useState<Interview | undefined>(
+    location.state?.interview,
+  );
   const [loading, setLoading] = useState(!location.state?.interview && !!id);
-  const [conversationHistory, setConversationHistory] = useState<string[]>([]);
   const [autoStarted, setAutoStarted] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize Vapi hook
   const {
     isCallActive,
     isMuted,
@@ -95,145 +263,83 @@ export default function VapiInterview() {
       createdAt: new Date().toISOString(),
     },
     onCallStart: () => {
-      console.log("Vapi interview started");
       setCallStartTime(Date.now());
     },
-    onCallEnd: async () => {
-      console.log("Vapi interview ended");
-      
-      // Calculate duration
-      const duration = callStartTime ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
-      
-      // Generate mock evaluation (you can extract this from Vapi messages if available)
-      const evaluation = {
-        totalScore: Math.floor(Math.random() * 30) + 70, // Random score 70-100
-        categoryScores: [
-          {
-            name: "Communication Skills" as const,
-            score: Math.floor(Math.random() * 30) + 70,
-            comment: "Clear and articulate responses with good structure.",
-          },
-          {
-            name: "Technical Knowledge" as const,
-            score: Math.floor(Math.random() * 30) + 70,
-            comment: "Demonstrated solid understanding of the technical concepts.",
-          },
-          {
-            name: "Problem Solving" as const,
-            score: Math.floor(Math.random() * 30) + 70,
-            comment: "Good approach to breaking down complex problems.",
-          },
-          {
-            name: "Cultural Fit" as const,
-            score: Math.floor(Math.random() * 30) + 70,
-            comment: "Values align well with team culture and goals.",
-          },
-          {
-            name: "Confidence and Clarity" as const,
-            score: Math.floor(Math.random() * 30) + 70,
-            comment: "Spoke confidently with clear explanations.",
-          },
-        ],
-        strengths: [
-          "Excellent communication throughout the interview",
-          "Strong technical knowledge in the required areas",
-          "Good problem-solving approach",
-        ],
-        areasForImprovement: [
-          "Could provide more specific examples from past experience",
-          "Consider being more concise in responses",
-        ],
-        finalAssessment:
-          "Strong candidate with good technical skills and communication abilities. Recommended for next round.",
-      };
+    onCallEnd: () => {
+      const duration = callStartTime
+        ? Math.floor((Date.now() - callStartTime) / 1000)
+        : 0;
 
-      // Save interview response to database
+      const finalTranscript = transcript
+        .filter((e: TranscriptEntry) => e.isFinal)
+        .map(
+          (e: TranscriptEntry) =>
+            `${e.role === "assistant" ? "Interviewer" : "You"}: ${e.text}`,
+        );
+
+      const questionCount = interview?.questions?.length || 3;
+      const evaluation = evaluateTranscript(transcript, questionCount);
+
+      // Navigate immediately with evaluation data — no waiting
       if (interview) {
         const interviewId = interview.id || interview._id;
-        
-        if (!interviewId) {
-          console.error("No interview ID available");
-          navigate("/results", {
-            state: {
-              interview,
-              transcript: conversationHistory,
-              evaluation,
-            },
-          });
-          return;
-        }
 
-        const responseData = {
-          interviewId,
-          userId: interview.userId,
-          fullTranscript: conversationHistory,
-          evaluation,
-          duration,
-        };
-
-        const result = await saveInterviewResponse(responseData);
-        
-        if (result.success && result.data) {
-          // Navigate to results with response ID
-          navigate(`/results/${result.data._id}`);
-        } else {
-          console.error("Failed to save interview response");
-          // Navigate anyway with state
-          navigate("/results", {
-            state: {
-              interview,
-              transcript: conversationHistory,
-              evaluation,
-            },
+        // Fire-and-forget save in background
+        if (interviewId) {
+          saveInterviewResponse({
+            interviewId,
+            userId: interview.userId,
+            fullTranscript: finalTranscript,
+            evaluation,
+            duration,
+          }).then((result) => {
+            if (result.success && result.data) {
+              // Already on results page via state, optionally update URL
+            }
           });
         }
+
+        // Navigate instantly with data in state
+        navigate("/results", {
+          state: {
+            interview,
+            transcript: finalTranscript,
+            evaluation,
+          },
+        });
       }
     },
-    onMessage: (message: any) => {
-      console.log("Vapi message:", message);
-      
-      if (message.type === "transcript") {
-        setConversationHistory((prev) => [...prev, message.text]);
-      }
-    },
-    onError: (err: Error) => {
-      console.error("Vapi error:", err);
-    },
+    onMessage: (_message: any) => {},
+    onError: (_err: Error) => {},
   });
 
-  // Fetch interview data if ID is provided
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [transcript]);
+
   useEffect(() => {
     async function fetchInterview() {
       if (id && !interview) {
-        console.log(`VapiInterview: Fetching interview with ID: ${id}`);
         setLoading(true);
         try {
           const data = await getInterview(id);
-          console.log('VapiInterview: Received data:', data);
           if (data) {
             setInterview(data);
-            console.log('VapiInterview: Interview set successfully');
           } else {
-            console.error("VapiInterview: Interview not found, redirecting");
             navigate("/pre-interview");
           }
         } catch (error) {
-          console.error("VapiInterview: Error fetching interview:", error);
           navigate("/pre-interview");
         } finally {
           setLoading(false);
         }
       } else if (!id && !interview) {
-        console.warn("VapiInterview: No interview data or ID, redirecting to pre-interview");
         navigate("/pre-interview");
-      } else if (interview) {
-        console.log('VapiInterview: Interview already loaded:', interview);
       }
     }
     fetchInterview();
   }, [id, interview, navigate]);
 
-  // Auto-start interview once loaded
   useEffect(() => {
     if (interview && !autoStarted && !isCallActive && !isLoading && !loading) {
       const timer = setTimeout(() => {
@@ -254,30 +360,38 @@ export default function VapiInterview() {
 
   if (loading) {
     return (
-      <div style={{
-        width: "100vw",
-        height: "100vh",
-        background: "#000",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-        gap: "1rem"
-      }}>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          border: "3px solid rgba(3,179,195,0.2)",
-          borderTop: "3px solid #03b3c3",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite"
-        }} />
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          background: "#000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "3px solid rgba(3,179,195,0.2)",
+            borderTop: "3px solid #03b3c3",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{
-          fontFamily: '"Quicksand", sans-serif',
-          color: "rgba(245,245,245,0.5)",
-          fontSize: "0.9rem"
-        }}>Loading interview...</p>
+        <p
+          style={{
+            fontFamily: '"Quicksand", sans-serif',
+            color: "rgba(245,245,245,0.5)",
+            fontSize: "0.9rem",
+          }}
+        >
+          Loading interview...
+        </p>
       </div>
     );
   }
@@ -289,7 +403,7 @@ export default function VapiInterview() {
   return (
     <>
       <style>{`
-        .vapi-interview-wrapper {
+        .interview-session-wrapper {
           width: 100vw;
           height: 100vh;
           background: #000;
@@ -297,12 +411,12 @@ export default function VapiInterview() {
           flex-direction: column;
           overflow: hidden;
         }
-        .vapi-interview-header {
+        .interview-session-header {
           padding: 1.5rem 2rem;
           flex-shrink: 0;
           border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .vapi-interview-content {
+        .interview-session-content {
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -311,32 +425,32 @@ export default function VapiInterview() {
           padding: 2rem;
           overflow-y: auto;
         }
-        .vapi-status-indicator {
+        .session-status-indicator {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
           padding: 0.5rem 1rem;
-          background: ${isCallActive ? 'rgba(3,179,195,0.1)' : 'rgba(255,255,255,0.05)'};
+          background: ${isCallActive ? "rgba(3,179,195,0.1)" : "rgba(255,255,255,0.05)"};
           border-radius: 20px;
           margin-bottom: 2rem;
         }
-        .vapi-status-dot {
+        .session-status-dot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: ${isCallActive ? '#03b3c3' : 'rgba(255,255,255,0.3)'};
-          animation: ${isCallActive ? 'pulse 2s ease-in-out infinite' : 'none'};
+          background: ${isCallActive ? "#03b3c3" : "rgba(255,255,255,0.3)"};
+          animation: ${isCallActive ? "pulse 2s ease-in-out infinite" : "none"};
         }
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
-        .vapi-controls {
+        .session-controls {
           display: flex;
           gap: 1rem;
           margin-top: 2rem;
         }
-        .vapi-button {
+        .session-button {
           padding: 1rem 2rem;
           font-family: "Quicksand", sans-serif;
           font-size: 1rem;
@@ -349,44 +463,99 @@ export default function VapiInterview() {
           align-items: center;
           gap: 0.5rem;
         }
-        .vapi-button:disabled {
+        .session-button:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
-        .vapi-button-start {
+        .session-button-start {
           background: #03b3c3;
           color: white;
         }
-        .vapi-button-start:hover:not(:disabled) {
+        .session-button-start:hover:not(:disabled) {
           background: #029ba8;
           transform: translateY(-2px);
         }
-        .vapi-button-stop {
+        .session-button-stop {
           background: #e74c3c;
           color: white;
         }
-        .vapi-button-stop:hover {
+        .session-button-stop:hover {
           background: #c0392b;
         }
-        .vapi-button-mute {
-          background: ${isMuted ? '#e74c3c' : '#2ecc71'};
+        .session-button-mute {
+          background: ${isMuted ? "#e74c3c" : "#2ecc71"};
           color: white;
         }
-        .vapi-button-mute:hover {
-          background: ${isMuted ? '#c0392b' : '#27ae60'};
+        .session-button-mute:hover {
+          background: ${isMuted ? "#c0392b" : "#27ae60"};
         }
-        .vapi-transcript {
+        .session-transcript {
           margin-top: 2rem;
-          padding: 1.5rem;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 10px;
-          max-height: 300px;
+          padding: 0;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 14px;
+          max-height: 340px;
           overflow-y: auto;
           width: 100%;
-          max-width: 600px;
+          max-width: 640px;
+          scroll-behavior: smooth;
         }
-        .vapi-error {
+        .session-transcript::-webkit-scrollbar {
+          width: 4px;
+        }
+        .session-transcript::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .session-transcript::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+        .transcript-header {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          padding: 1rem 1.25rem 0.75rem;
+          background: rgba(0,0,0,0.85);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .transcript-entry {
+          padding: 0.65rem 1.25rem;
+          display: flex;
+          gap: 0.6rem;
+          align-items: flex-start;
+          animation: fadeIn 0.2s ease;
+        }
+        .transcript-entry + .transcript-entry {
+          border-top: 1px solid rgba(255,255,255,0.03);
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .transcript-role {
+          font-family: "Bricolage Grotesque", sans-serif;
+          font-size: 0.72rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          flex-shrink: 0;
+          padding-top: 0.15rem;
+          width: 80px;
+          text-align: right;
+        }
+        .transcript-text {
+          font-family: "Quicksand", sans-serif;
+          font-size: 0.88rem;
+          line-height: 1.6;
+          flex: 1;
+        }
+        .transcript-partial {
+          opacity: 0.5;
+          font-style: italic;
+        }
+        .session-error {
           padding: 1rem;
           background: rgba(231,76,60,0.1);
           border: 1px solid rgba(231,76,60,0.3);
@@ -397,9 +566,8 @@ export default function VapiInterview() {
         }
       `}</style>
 
-      <div className="vapi-interview-wrapper">
-        {/* Header */}
-        <div className="vapi-interview-header">
+      <div className="interview-session-wrapper">
+        <div className="interview-session-header">
           <span
             style={{
               fontFamily: '"Bricolage Grotesque", sans-serif',
@@ -416,21 +584,10 @@ export default function VapiInterview() {
           >
             Samvaad
             <span style={{ color: "#03b3c3", fontWeight: 800 }}>AI</span>
-            <span style={{ 
-              fontSize: "0.65rem", 
-              fontWeight: 500, 
-              color: "rgba(3,179,195,0.6)",
-              marginLeft: "0.5rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em"
-            }}>
-              Vapi Powered
-            </span>
           </span>
         </div>
 
-        <div className="vapi-interview-content">
-          {/* Interview Info */}
+        <div className="interview-session-content">
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
             <h1
               style={{
@@ -454,62 +611,50 @@ export default function VapiInterview() {
                 marginBottom: 0,
               }}
             >
-              {interview.level} • {interview.type} • {interview.questions.length} Questions
+              {interview.level} • {interview.type} •{" "}
+              {interview.questions.length} Questions
             </p>
-            <div style={{ 
-              marginTop: "1rem",
-              display: "flex",
-              gap: "0.5rem",
-              justifyContent: "center",
-              flexWrap: "wrap"
-            }}>
-              {interview.techstack.map((tech, idx) => (
-                <span
-                  key={idx}
-                  style={{
-                    padding: "0.35rem 0.9rem",
-                    background: "rgba(3,179,195,0.1)",
-                    border: "1px solid rgba(3,179,195,0.2)",
-                    borderRadius: "20px",
-                    fontSize: "0.8rem",
-                    color: "#03b3c3",
-                    fontFamily: '"Quicksand", sans-serif',
-                    fontWeight: 500,
-                  }}
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
+            <div
+              style={{
+                marginTop: "1rem",
+                display: "flex",
+                gap: "0.5rem",
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            ></div>
           </div>
 
-          {/* Error Display */}
           {error && (
-            <div className="vapi-error">
+            <div className="session-error">
               <strong>Error:</strong> {error}
             </div>
           )}
 
-          {/* Status Indicator */}
-          <div className="vapi-status-indicator">
-            <div className="vapi-status-dot" />
-            <span style={{ 
-              fontSize: "0.9rem",
-              fontFamily: '"Quicksand", sans-serif',
-              fontWeight: 500,
-              color: isCallActive ? "#03b3c3" : "rgba(245,245,245,0.5)"
-            }}>
-              {isLoading ? "Connecting..." : isCallActive ? "Interview in progress" : "Ready to start"}
+          <div className="session-status-indicator">
+            <div className="session-status-dot" />
+            <span
+              style={{
+                fontSize: "0.9rem",
+                fontFamily: '"Quicksand", sans-serif',
+                fontWeight: 500,
+                color: isCallActive ? "#03b3c3" : "rgba(245,245,245,0.5)",
+              }}
+            >
+              {isLoading
+                ? "Connecting..."
+                : isCallActive
+                  ? "Interview in progress"
+                  : "Ready to start"}
             </span>
           </div>
 
-          {/* Controls */}
-          <div className="vapi-controls">
+          <div className="session-controls">
             {!isCallActive ? (
               <button
                 onClick={handleStartInterview}
                 disabled={isLoading}
-                className="vapi-button vapi-button-start"
+                className="session-button session-button-start"
               >
                 <MicIcon />
                 {isLoading ? "Connecting..." : "Start Voice Interview"}
@@ -518,14 +663,14 @@ export default function VapiInterview() {
               <>
                 <button
                   onClick={toggleMute}
-                  className="vapi-button vapi-button-mute"
+                  className="session-button session-button-mute"
                 >
                   {isMuted ? <MicOffIcon /> : <MicIcon />}
                   {isMuted ? "Unmute" : "Mute"}
                 </button>
                 <button
                   onClick={handleEndInterview}
-                  className="vapi-button vapi-button-stop"
+                  className="session-button session-button-stop"
                 >
                   <StopIcon />
                   End Interview
@@ -534,47 +679,90 @@ export default function VapiInterview() {
             )}
           </div>
 
-          {/* Instructions */}
           {!isCallActive && !isLoading && (
-            <p style={{
-              marginTop: "2rem",
-              fontFamily: '"Quicksand", sans-serif',
-              fontSize: "0.9rem",
-              color: "rgba(245,245,245,0.4)",
-              textAlign: "center",
-              maxWidth: "500px",
-              lineHeight: 1.6,
-            }}>
-              Click "Start Voice Interview" to begin your AI-powered interview session. 
-              The AI interviewer will ask you questions and listen to your responses in real-time.
+            <p
+              style={{
+                marginTop: "2rem",
+                fontFamily: '"Quicksand", sans-serif',
+                fontSize: "0.9rem",
+                color: "rgba(245,245,245,0.4)",
+                textAlign: "center",
+                maxWidth: "500px",
+                lineHeight: 1.6,
+              }}
+            >
+              Click "Start Voice Interview" to begin your AI-powered interview
+              session. The AI interviewer will ask you questions and listen to
+              your responses in real-time.
             </p>
           )}
 
-          {/* Transcript */}
           {transcript.length > 0 && (
-            <div className="vapi-transcript">
-              <h3 style={{
-                fontFamily: '"Bricolage Grotesque", sans-serif',
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#03b3c3",
-                marginBottom: "1rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}>
-                Live Transcript
-              </h3>
-              {transcript.map((text: string, index: number) => (
-                <p key={index} style={{
-                  marginBottom: "0.5rem",
-                  fontSize: "0.9rem",
-                  lineHeight: 1.6,
-                  color: "rgba(245,245,245,0.7)",
-                  fontFamily: '"Quicksand", sans-serif',
-                }}>
-                  {text}
-                </p>
-              ))}
+            <div className="session-transcript">
+              <div className="transcript-header">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: isCallActive
+                        ? "#2ecc71"
+                        : "rgba(255,255,255,0.3)",
+                      animation: isCallActive
+                        ? "pulse 2s ease-in-out infinite"
+                        : "none",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: '"Bricolage Grotesque", sans-serif',
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: "rgba(245,245,245,0.6)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Live Transcript
+                  </span>
+                </div>
+              </div>
+              <div style={{ padding: "0.4rem 0" }}>
+                {transcript.map((entry: TranscriptEntry, index: number) => (
+                  <div
+                    key={`${entry.role}-${index}-${entry.timestamp}`}
+                    className={`transcript-entry${!entry.isFinal ? " transcript-partial" : ""}`}
+                  >
+                    <span
+                      className="transcript-role"
+                      style={{
+                        color:
+                          entry.role === "assistant" ? "#03b3c3" : "#2ecc71",
+                      }}
+                    >
+                      {entry.role === "assistant" ? "Interviewer" : "You"}
+                    </span>
+                    <span
+                      className="transcript-text"
+                      style={{
+                        color: entry.isFinal
+                          ? "rgba(245,245,245,0.85)"
+                          : "rgba(245,245,245,0.4)",
+                      }}
+                    >
+                      {entry.text}
+                    </span>
+                  </div>
+                ))}
+                <div ref={transcriptEndRef} />
+              </div>
             </div>
           )}
         </div>

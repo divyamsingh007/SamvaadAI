@@ -1,8 +1,7 @@
 import type { Interview } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-console.log('Interview Service - API_BASE_URL:', API_BASE_URL);
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export interface CreateInterviewRequest {
   type: string;
@@ -24,7 +23,7 @@ export interface CreateInterviewResponse {
  * Creates a new interview with AI-generated questions
  */
 export async function createInterview(
-  data: CreateInterviewRequest
+  data: CreateInterviewRequest,
 ): Promise<CreateInterviewResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/vapi/generate`, {
@@ -56,7 +55,7 @@ export async function createInterview(
 export async function getUserInterviews(userId: string): Promise<Interview[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/interviews?userId=${userId}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -72,26 +71,25 @@ export async function getUserInterviews(userId: string): Promise<Interview[]> {
 /**
  * Fetches a specific interview by ID
  */
-export async function getInterview(interviewId: string): Promise<Interview | null> {
+export async function getInterview(
+  interviewId: string,
+): Promise<Interview | null> {
   try {
-    console.log(`Fetching interview with ID: ${interviewId}`);
-    const response = await fetch(`${API_BASE_URL}/vapi/interviews/${interviewId}`);
-    
-    console.log(`Response status: ${response.status}`);
-    
+    const response = await fetch(
+      `${API_BASE_URL}/vapi/interviews/${interviewId}`,
+    );
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log('Fetched interview data:', result);
-    
-    // MongoDB returns _id, convert to id for frontend
+
     const interview = result.data;
     if (interview && interview._id) {
       interview.id = interview._id;
     }
-    
+
     return interview || null;
   } catch (error) {
     console.error("Error fetching interview:", error);
@@ -107,7 +105,7 @@ export async function deleteInterview(interviewId: string): Promise<boolean> {
     const response = await fetch(`${API_BASE_URL}/interviews/${interviewId}`, {
       method: "DELETE",
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error("Error deleting interview:", error);
