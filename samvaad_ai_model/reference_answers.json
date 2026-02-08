@@ -1,0 +1,51 @@
+{
+  "reference_answers": {
+    "1": {
+      "question": "Tell me about yourself and your background.",
+      "reference_answer": "A good answer should include: educational background, work experience, key skills/competencies, and how they relate to the role. Should demonstrate self-awareness and clear communication."
+    },
+    "2": {
+      "question": "What are your main strengths?",
+      "reference_answer": "Should mention 2-3 specific strengths backed by examples or evidence. Strengths should be relevant to the role being applied for, and demonstrated through past accomplishments."
+    },
+    "3": {
+      "question": "Describe a challenge you solved.",
+      "reference_answer": "Should use STAR method: Situation, Task, Action, Result. Should demonstrate problem-solving, initiative, and ability to handle challenges. Result should show positive outcome."
+    },
+    "4": {
+      "question": "How do you approach learning new things?",
+      "reference_answer": "Should mention specific strategies: reading, online courses, mentoring, hands-on practice, etc. Should demonstrate continuous learning mindset and growth orientation."
+    },
+    "5": {
+      "question": "What are your career goals?",
+      "reference_answer": "Should show clear vision and ambition. Goals should align with the company/role. Should mention both short-term (1-2 years) and long-term (5+ years) goals."
+    },
+    "6": {
+      "question": "Tell me about a time you worked in a team.",
+      "reference_answer": "Should demonstrate collaboration, communication, and teamwork skills. Should explain role in team, how they contributed, and positive outcome achieved together."
+    },
+    "7": {
+      "question": "How do you handle failure or setbacks?",
+      "reference_answer": "Should show resilience, learning ability, and positive attitude. Should explain a specific example, what was learned, and how it led to improvement or growth."
+    },
+    "8": {
+      "question": "What interests you about this opportunity?",
+      "reference_answer": "Should show knowledge of company/role. Should mention specific aspects that align with their skills, interests, and career goals. Should be genuine and specific."
+    },
+    "9": {
+      "question": "How do you stay organized and manage time?",
+      "reference_answer": "Should mention specific tools/methods used (task lists, calendars, prioritization techniques). Should provide examples of how this has led to success in managing multiple tasks."
+    },
+    "10": {
+      "question": "What questions do you have for us?",
+      "reference_answer": "Should ask thoughtful questions about: role responsibilities, team dynamics, company culture, growth opportunities, or performance metrics. Shows genuine interest and engagement."
+    }
+  },
+  "evaluation_rubric": {
+    "completeness": "Does the answer fully address the question?",
+    "relevance": "Is the answer relevant and on-topic?",
+    "clarity": "Is the answer clear and well-articulated?",
+    "specificity": "Does the answer provide specific examples or details?",
+    "coherence": "Is the answer logically structured and coherent?"
+  }
+}

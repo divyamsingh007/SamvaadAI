@@ -1,0 +1,18 @@
+# Audio processing
+numpy
+sounddevice
+scipy
+librosa
+
+# ML models
+scikit-learn
+joblib
+
+# Google APIs
+google-genai>=1.0.0
+
+# Speech-to-Text (free, no API key needed)
+SpeechRecognition
+
+# Others
+python-dotenv
