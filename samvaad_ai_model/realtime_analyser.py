@@ -26,55 +26,50 @@ FEATURE_BOUNDS = {
 SCORING_PROFILES = {
     'delivery_fluency': {
         'name': 'Delivery Fluency (Default)',
-        'description': 'Measures speech pace, pauses, and filler words',
         'weights': {
-            'pause_freq': -0.25,    
-            'avg_pause': -0.20,      
-            'silence_ratio': -0.25,  
-            'speech_rate': 0.20,    
-            'pitch_std': -0.10      
+            'pause_freq': -0.25,
+            'avg_pause': -0.20,
+            'silence_ratio': -0.25,
+            'speech_rate': 0.20,
+            'pitch_std': -0.10
         }
     },
-    
+
     'vocal_stability': {
         'name': 'Vocal Stability',
-        'description': 'Measures steadiness and consistency of voice',
         'weights': {
-            'pause_freq': -0.05,     
-            'avg_pause': -0.05,    
-            'silence_ratio': 0.0,  
-            'speech_rate': 0.0,      
-            'pitch_std': -0.90       
+            'pause_freq': -0.05,
+            'avg_pause': -0.05,
+            'silence_ratio': 0.0,
+            'speech_rate': 0.0,
+            'pitch_std': -0.90
         }
     },
-    
+
     'content_focus': {
         'name': 'Content-Focused Speaking',
-        'description': 'Measures meaningful speaking vs filler',
         'weights': {
-            'pause_freq': -0.10,     
-            'avg_pause': 0.0,        
-            'silence_ratio': -0.80,   
-            'speech_rate': 0.0,      
-            'pitch_std': -0.10        
+            'pause_freq': -0.10,
+            'avg_pause': 0.0,
+            'silence_ratio': -0.80,
+            'speech_rate': 0.0,
+            'pitch_std': -0.10
         }
     },
-    
+
     'presence': {
         'name': 'Presence & Clarity',
-        'description': 'Measures how present and engaged you sound',
         'weights': {
-            'pause_freq': -0.15,      
-            'avg_pause': -0.10,       
-            'silence_ratio': -0.30,  
-            'speech_rate': 0.10,      
-            'pitch_std': 0.0          
+            'pause_freq': -0.15,
+            'avg_pause': -0.10,
+            'silence_ratio': -0.30,
+            'speech_rate': 0.10,
+            'pitch_std': 0.0
         }
     },
-    
+
     'balanced': {
         'name': 'Balanced Assessment',
-        'description': 'Balanced across all factors',
         'weights': {
             'pause_freq': -0.20,
             'avg_pause': -0.15,
@@ -83,10 +78,9 @@ SCORING_PROFILES = {
             'pitch_std': -0.05
         }
     },
-    
+
     'custom': {
         'name': 'Custom (Define Your Own)',
-        'description': 'Create your own weighting',
         'weights': {
             'pause_freq': -0.20,
             'avg_pause': -0.15,
@@ -99,6 +93,7 @@ SCORING_PROFILES = {
 
 
 class RealtimeMLConfidence:
+
     def __init__(self, model_path="confidence_model.pkl", scoring_profile='delivery_fluency'):
         self.model = joblib.load(model_path)
         self.scoring_profile = scoring_profile
@@ -139,40 +134,40 @@ class RealtimeMLConfidence:
 
         audio = audio.astype(float)
         audio -= np.mean(audio)
-        
+
         if len(audio) > 4096:
             audio = signal.resample(audio, 4096)
-        
+
         window = np.hamming(len(audio))
         audio_windowed = audio * window
-        
+
         freqs = np.fft.rfftfreq(len(audio_windowed), 1.0 / self.sample_rate)
         spectrum = np.abs(np.fft.rfft(audio_windowed))
-        
+
         min_freq = 50
         max_freq = 320
-        
+
         freq_mask = (freqs >= min_freq) & (freqs <= max_freq)
-        
+
         if not np.any(freq_mask):
             return 0.0
-        
+
         masked_spectrum = spectrum[freq_mask]
         masked_freqs = freqs[freq_mask]
-        
+
         if len(masked_spectrum) == 0:
             return 0.0
-        
+
         peak_idx = np.argmax(masked_spectrum)
         peak_freq = masked_freqs[peak_idx]
         peak_power = masked_spectrum[peak_idx]
-        
+
         avg_power = np.mean(masked_spectrum)
         power_ratio = peak_power / (avg_power + 1e-10)
-        
+
         if power_ratio < 3.0:
             return 0.0
-        
+
         if peak_freq > 100:
             half_freq = peak_freq / 2.0
             half_mask = np.abs(freqs - half_freq) < 2
@@ -180,12 +175,12 @@ class RealtimeMLConfidence:
                 half_power = spectrum[half_mask].max() if np.any(half_mask) else 0
                 if half_power > 0.7 * peak_power:
                     peak_freq = half_freq
-        
+
         if min_freq <= peak_freq <= max_freq:
             return peak_freq
-        
+
         return 0.0
-    
+
     def extract_features(self):
         pause_freq = len(self.recent_pauses) / self.analysis_window * 60
         avg_pause = np.mean(self.recent_pauses) if self.recent_pauses else 0.0
@@ -251,7 +246,6 @@ class RealtimeMLConfidence:
         return True
 
     def calculate_custom_score(self, features):
-
         normalized = np.array([
             (features[0] - FEATURE_BOUNDS['pause_freq'][0]) / (FEATURE_BOUNDS['pause_freq'][1] - FEATURE_BOUNDS['pause_freq'][0]),
             (features[1] - FEATURE_BOUNDS['avg_pause'][0]) / (FEATURE_BOUNDS['avg_pause'][1] - FEATURE_BOUNDS['avg_pause'][0]),
@@ -259,9 +253,9 @@ class RealtimeMLConfidence:
             (features[3] - FEATURE_BOUNDS['speech_rate'][0]) / (FEATURE_BOUNDS['speech_rate'][1] - FEATURE_BOUNDS['speech_rate'][0]),
             (features[4] - FEATURE_BOUNDS['pitch_std'][0]) / (FEATURE_BOUNDS['pitch_std'][1] - FEATURE_BOUNDS['pitch_std'][0])
         ])
-        
+
         normalized = np.clip(normalized, 0, 1)
-        
+
         weights = np.array([
             self.profile_config['weights']['pause_freq'],
             self.profile_config['weights']['avg_pause'],
@@ -271,18 +265,18 @@ class RealtimeMLConfidence:
         ])
 
         inverted = np.array([
-            1 - normalized[0],  
-            1 - normalized[1], 
-            1 - normalized[2],  
-            normalized[3],    
-            1 - normalized[4]   
+            1 - normalized[0],
+            1 - normalized[1],
+            1 - normalized[2],
+            normalized[3],
+            1 - normalized[4]
         ])
-        
+
         weighted_score = np.dot(inverted, np.abs(weights))
-        
+
         total_weight = np.sum(np.abs(weights))
         confidence = (weighted_score / total_weight) * 100 if total_weight > 0 else 0
-        
+
         return np.clip(confidence, 0, 100)
 
     def start(self):
@@ -294,9 +288,7 @@ class RealtimeMLConfidence:
         )
         stream.start()
 
-        print("🎤 Confidence Analyzer - Custom Scoring")
         print(f"Profile: {self.profile_config['name']}")
-        print(f"Description: {self.profile_config['description']}\n")
         print("Waiting for valid speech window...\n")
 
         try:
@@ -308,7 +300,6 @@ class RealtimeMLConfidence:
 
                 if self.noise_floor is None and len(self.energy_buffer) >= 10:
                     self.noise_floor = np.median(self.energy_buffer)
-                    print(f"✓ Noise floor calibrated: {self.noise_floor:.1f} dB\n")
                     continue
 
                 if self.noise_floor is None:
@@ -338,14 +329,14 @@ class RealtimeMLConfidence:
                     feats_clipped, feats_raw = self.extract_features()
 
                     inference_count += 1
-                    
+
                     x = pd.DataFrame([feats_clipped], columns=FEATURE_NAMES)
                     model_pred = self.model.predict(x)[0]
                     model_pred_clamped = np.clip(model_pred, 1.0, 5.0)
                     model_conf_raw = (model_pred_clamped - 1.0) / 4.0 * 100.0
-                    
+
                     custom_conf_raw = self.calculate_custom_score(feats_clipped)
-                    
+
                     if self.prev_conf is None:
                         custom_conf = custom_conf_raw
                     else:
@@ -353,48 +344,48 @@ class RealtimeMLConfidence:
                             (1 - self.smoothing_alpha) * self.prev_conf +
                             self.smoothing_alpha * custom_conf_raw
                         )
-                    
+
                     custom_conf = float(np.clip(custom_conf, 0.0, 100.0))
                     self.prev_conf = custom_conf
 
                     print(f"\n{'='*70}")
                     print(f"INFERENCE #{inference_count}")
                     print(f"{'='*70}")
-                    
+
                     print(f"\nFeatures:")
-                    print(f"  pause_freq:    {feats_clipped[0]:7.1f} (pauses per 5sec)")
-                    print(f"  avg_pause:     {feats_clipped[1]:7.2f}s (pause duration)")
-                    print(f"  silence_ratio: {feats_clipped[2]:7.2%} (filler/silence)")
-                    print(f"  speech_rate:   {feats_clipped[3]:7.1f} (wpm proxy)")
-                    print(f"  pitch_std:     {feats_clipped[4]:7.2f}Hz (vocal stability)")
-                    
+                    print(f"  pause_freq:    {feats_clipped[0]:7.1f}")
+                    print(f"  avg_pause:     {feats_clipped[1]:7.2f}s")
+                    print(f"  silence_ratio: {feats_clipped[2]:7.2%}")
+                    print(f"  speech_rate:   {feats_clipped[3]:7.1f}")
+                    print(f"  pitch_std:     {feats_clipped[4]:7.2f}Hz")
+
                     print(f"\n{'='*70}")
                     print(f"SCORE: {custom_conf:.1f}%")
                     print(f"{'='*70}")
                     print(f"Profile: {self.profile_config['name']}")
-                    
+
                     if custom_conf >= 70:
-                        print(f"Rating: EXCELLENT ✓✓✓")
+                        print(f"Rating: EXCELLENT")
                     elif custom_conf >= 50:
-                        print(f"Rating: GOOD ✓✓")
+                        print(f"Rating: GOOD")
                     elif custom_conf >= 30:
-                        print(f"Rating: FAIR ✓")
+                        print(f"Rating: FAIR")
                     else:
                         print(f"Rating: NEEDS WORK")
-                    
+
                     print(f"\n(Model-based reference: {model_conf_raw:.1f}%)")
 
                 else:
                     status_parts = []
-                    
+
                     if len(self.voiced_buffer) < self.voiced_buffer.maxlen:
                         status_parts.append(
                             f"Voice[{len(self.voiced_buffer)}/{self.voiced_buffer.maxlen}]"
                         )
-                    
+
                     if len(self.recent_pauses) < 2:
                         status_parts.append(f"Pauses[{len(self.recent_pauses)}/2]")
-                    
+
                     if len(self.pitch_buffer) < 15:
                         status_parts.append(f"Pitch[{len(self.pitch_buffer)}/15]")
 
@@ -404,23 +395,21 @@ class RealtimeMLConfidence:
         except KeyboardInterrupt:
             stream.stop()
             stream.close()
-            print("\n✓ Stopped.")
+            print("\nStopped.")
 
 
 if __name__ == "__main__":
     import sys
-    
-    profile = 'balanced'  
+
+    profile = 'balanced'
     if len(sys.argv) > 1:
         profile = sys.argv[1]
-    
+
     if profile not in SCORING_PROFILES:
         print("Available profiles:")
         for key, config in SCORING_PROFILES.items():
             print(f"  {key:20s} - {config['name']}")
         print(f"\nUsage: python script.py [profile_name]")
-        print(f"Example: python script.py balanced")
         sys.exit(1)
-    
-    print(f"Starting with profile: {profile}\n")
+
     RealtimeMLConfidence(scoring_profile=profile).start()

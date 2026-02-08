@@ -1,19 +1,8 @@
-"""FFT-based pitch detection"""
-
 import numpy as np
 from scipy import signal
 
+
 def estimate_pitch_fft(audio, sample_rate=16000):
-    """
-    Estimate fundamental frequency using FFT
-    
-    Args:
-        audio: Audio chunk as numpy array
-        sample_rate: Sample rate in Hz
-        
-    Returns:
-        Estimated pitch in Hz, or 0 if no pitch detected
-    """
     if len(audio) < 512:
         return 0.0
     

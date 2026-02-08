@@ -1,5 +1,3 @@
-"""Scoring profiles - different weighting schemes for confidence"""
-
 SCORING_PROFILES = {
     "balanced": {
         "name": "Balanced",
