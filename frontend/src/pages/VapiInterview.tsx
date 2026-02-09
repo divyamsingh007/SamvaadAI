@@ -1,10 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { useVapi } from "../hooks/useVapi";
 import type { TranscriptEntry } from "../hooks/useVapi";
 import { getInterview } from "../services/interview.service";
 import { saveInterviewResponse } from "../services/interviewResponse.service";
 import type { Interview } from "../types";
+
+const ANALYSIS_STEPS = [
+  "Analysing technicality in answers",
+  "Evaluating communication clarity",
+  "Measuring confidence & delivery",
+  "Reviewing depth of knowledge",
+  "Assessing problem-solving approach",
+  "Scoring relevance to role",
+  "Generating personalised feedback",
+];
 
 function evaluateTranscript(entries: TranscriptEntry[], questionCount: number) {
   const userEntries = entries.filter((e) => e.isFinal && e.role === "user");
@@ -235,7 +246,19 @@ export default function InterviewSession() {
   const [loading, setLoading] = useState(!location.state?.interview && !!id);
   const [autoStarted, setAutoStarted] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const pendingNavRef = useRef<{ state: any } | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!analysing) return;
+    const interval = setInterval(() => {
+      setAnalysisStep((prev) => (prev + 1) % ANALYSIS_STEPS.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [analysing]);
 
   const {
     isCallActive,
@@ -243,7 +266,7 @@ export default function InterviewSession() {
     isLoading,
     error,
     startCall,
-    stopCall,
+    forceStop,
     toggleMute,
     transcript,
   } = useVapi({
@@ -266,6 +289,9 @@ export default function InterviewSession() {
       setCallStartTime(Date.now());
     },
     onCallEnd: () => {
+      // Skip if confirmEnd already started the analysis loader
+      if (analysing) return;
+
       const duration = callStartTime
         ? Math.floor((Date.now() - callStartTime) / 1000)
         : 0;
@@ -280,7 +306,7 @@ export default function InterviewSession() {
       const questionCount = interview?.questions?.length || 3;
       const evaluation = evaluateTranscript(transcript, questionCount);
 
-      // Navigate immediately with evaluation data — no waiting
+      // Navigate with analysis loader
       if (interview) {
         const interviewId = interview.id || interview._id;
 
@@ -294,19 +320,25 @@ export default function InterviewSession() {
             duration,
           }).then((result) => {
             if (result.success && result.data) {
-              // Already on results page via state, optionally update URL
+              // Already on results page via state
             }
           });
         }
 
-        // Navigate instantly with data in state
-        navigate("/results", {
+        // Store nav state and show analysis loader
+        pendingNavRef.current = {
           state: {
             interview,
             transcript: finalTranscript,
             evaluation,
           },
-        });
+        };
+        setAnalysing(true);
+        setTimeout(() => {
+          navigate("/results", {
+            state: pendingNavRef.current?.state,
+          });
+        }, 8000);
       }
     },
     onMessage: (_message: any) => {},
@@ -355,8 +387,65 @@ export default function InterviewSession() {
   };
 
   const handleEndInterview = () => {
-    stopCall();
+    setShowConfirm(true);
   };
+
+  const confirmEnd = useCallback(() => {
+    setShowConfirm(false);
+
+    // Force-kill the call — mute mic, stop assistant voice, end session
+    try {
+      forceStop();
+    } catch {
+      // ignore errors, we're leaving anyway
+    }
+
+    // Compute results directly instead of relying on onCallEnd
+    const duration = callStartTime
+      ? Math.floor((Date.now() - callStartTime) / 1000)
+      : 0;
+
+    const finalTranscript = transcript
+      .filter((e: TranscriptEntry) => e.isFinal)
+      .map(
+        (e: TranscriptEntry) =>
+          `${e.role === "assistant" ? "Interviewer" : "You"}: ${e.text}`,
+      );
+
+    const questionCount = interview?.questions?.length || 3;
+    const evaluation = evaluateTranscript(transcript, questionCount);
+
+    if (interview) {
+      const interviewId = interview.id || interview._id;
+
+      // Save in background
+      if (interviewId) {
+        saveInterviewResponse({
+          interviewId,
+          userId: interview.userId,
+          fullTranscript: finalTranscript,
+          evaluation,
+          duration,
+        }).catch(() => {});
+      }
+
+      pendingNavRef.current = {
+        state: {
+          interview,
+          transcript: finalTranscript,
+          evaluation,
+        },
+      };
+    }
+
+    // Show analysis loader and navigate after delay
+    setAnalysing(true);
+    setTimeout(() => {
+      navigate("/results", {
+        state: pendingNavRef.current?.state ?? {},
+      });
+    }, 8000);
+  }, [forceStop, callStartTime, transcript, interview, navigate]);
 
   if (loading) {
     return (
@@ -565,6 +654,263 @@ export default function InterviewSession() {
           font-family: "Quicksand", sans-serif;
         }
       `}</style>
+
+      <AnimatePresence>
+        {analysing && (
+          <motion.div
+            key="analysis-loader"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              background: "#000",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "2.5rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
+              {"Samvaad".split("").map((char, i) => (
+                <motion.span
+                  key={`ac-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.08 + i * 0.06,
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    fontFamily: '"Bricolage Grotesque", sans-serif',
+                    fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    color: "#F5F5F5",
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+              {"AI".split("").map((char, i) => (
+                <motion.span
+                  key={`aa-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.08 + (7 + i) * 0.06,
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    fontFamily: '"Bricolage Grotesque", sans-serif',
+                    fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                    fontWeight: 800,
+                    letterSpacing: "-0.02em",
+                    background: "linear-gradient(135deg, #03b3c3, #6750a2)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+            </div>
+
+            <div
+              style={{
+                width: 120,
+                height: 1,
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 1,
+                overflow: "hidden",
+              }}
+            >
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{
+                  delay: 0.5,
+                  duration: 1.4,
+                  repeat: Infinity,
+                  ease: [0.45, 0, 0.55, 1],
+                }}
+                style={{
+                  width: "40%",
+                  height: "100%",
+                  borderRadius: 1,
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                bottom: "clamp(2.5rem, 6vh, 4rem)",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "min(440px, 85vw)",
+                textAlign: "center",
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={analysisStep}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                  style={{
+                    fontFamily: '"Quicksand", sans-serif',
+                    fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)",
+                    fontWeight: 500,
+                    color: "rgba(245,245,245,0.45)",
+                    lineHeight: 1.6,
+                    margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <motion.span
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{
+                      duration: 1.4,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "#03b3c3",
+                      flexShrink: 0,
+                    }}
+                  />
+                  {ANALYSIS_STEPS[analysisStep]}…
+                </motion.p>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showConfirm && (
+          <motion.div
+            key="confirm-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9998,
+              background: "rgba(0,0,0,0.75)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "1.5rem",
+            }}
+            onClick={() => setShowConfirm(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 420,
+                background: "#111",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 16,
+                padding: "2rem 2rem 1.6rem",
+                textAlign: "center",
+              }}
+            >
+              <h3
+                style={{
+                  fontFamily: '"Bricolage Grotesque", sans-serif',
+                  fontWeight: 700,
+                  fontSize: "1.25rem",
+                  color: "#F5F5F5",
+                  margin: "0 0 0.6rem",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                End Interview?
+              </h3>
+              <p
+                style={{
+                  fontFamily: '"Quicksand", sans-serif',
+                  fontSize: "0.88rem",
+                  fontWeight: 400,
+                  color: "rgba(245,245,245,0.5)",
+                  lineHeight: 1.6,
+                  margin: "0 0 1.8rem",
+                }}
+              >
+                Your progress will be submitted and results will be generated
+                based on the answers provided so far.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.75rem",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  style={{
+                    padding: "0.7em 1.8em",
+                    fontFamily: '"Quicksand", sans-serif',
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    color: "rgba(245,245,245,0.6)",
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    transition: "border-color 0.2s ease",
+                  }}
+                >
+                  Continue Interview
+                </button>
+                <button
+                  onClick={confirmEnd}
+                  style={{
+                    padding: "0.7em 1.8em",
+                    fontFamily: '"Quicksand", sans-serif',
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    color: "#000",
+                    background: "#03b3c3",
+                    border: "1px solid #03b3c3",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    transition: "opacity 0.2s ease",
+                  }}
+                >
+                  Yes, End It
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="interview-session-wrapper">
         <div className="interview-session-header">

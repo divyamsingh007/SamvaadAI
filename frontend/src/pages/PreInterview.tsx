@@ -1,7 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
 import CtaButton from "../components/CtaButton";
 import { createInterview } from "../services/interview.service";
+
+const INTERVIEW_TIPS = [
+  "Take a moment to structure your answer before speaking.",
+  "Use the STAR method — Situation, Task, Action, Result.",
+  "It's okay to pause and think. Silence beats rambling.",
+  "Speak to the interviewer, not at them. Be conversational.",
+  "Quantify your impact wherever possible.",
+  "Ask clarifying questions — it shows critical thinking.",
+  "Keep answers concise. Aim for 60–90 seconds per response.",
+  "Show enthusiasm for the role. Energy is contagious.",
+  "Relate your experience directly to the job requirements.",
+  "End each answer confidently — don't trail off.",
+];
 
 const UploadIcon = () => (
   <svg
@@ -208,6 +222,17 @@ export default function PreInterview() {
   const [focusArea, setFocusArea] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tipIndex, setTipIndex] = useState(() =>
+    Math.floor(Math.random() * INTERVIEW_TIPS.length),
+  );
+
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % INTERVIEW_TIPS.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const isReady = resumeFile && role !== "";
 
@@ -255,6 +280,169 @@ export default function PreInterview() {
 
   return (
     <>
+      <AnimatePresence>
+        {loading && (
+          <motion.div
+            key="interview-loader"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              background: "#000",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "2.5rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
+              {"Samvaad".split("").map((char, i) => (
+                <motion.span
+                  key={`lc-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.08 + i * 0.06,
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    fontFamily: '"Bricolage Grotesque", sans-serif',
+                    fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    color: "#F5F5F5",
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+              {"AI".split("").map((char, i) => (
+                <motion.span
+                  key={`la-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.08 + (7 + i) * 0.06,
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    fontFamily: '"Bricolage Grotesque", sans-serif',
+                    fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                    fontWeight: 800,
+                    letterSpacing: "-0.02em",
+                    background: "linear-gradient(135deg, #03b3c3, #6750a2)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+            </div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              style={{
+                fontFamily: '"Quicksand", sans-serif',
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                color: "rgba(245,245,245,0.4)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as const,
+                margin: 0,
+              }}
+            >
+              Preparing your interview…
+            </motion.p>
+
+            {/* Minimal white shimmer bar */}
+            <div
+              style={{
+                width: 120,
+                height: 1,
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 1,
+                overflow: "hidden",
+              }}
+            >
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{
+                  delay: 0.5,
+                  duration: 1.4,
+                  repeat: Infinity,
+                  ease: [0.45, 0, 0.55, 1],
+                }}
+                style={{
+                  width: "40%",
+                  height: "100%",
+                  borderRadius: 1,
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                bottom: "clamp(2rem, 6vh, 4rem)",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "min(480px, 85vw)",
+                textAlign: "center",
+              }}
+            >
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+                style={{
+                  fontFamily: '"Quicksand", sans-serif',
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  color: "rgba(3,179,195,0.5)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const,
+                  marginBottom: "0.6rem",
+                }}
+              >
+                Interview Tip
+              </motion.p>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={tipIndex}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                  style={{
+                    fontFamily: '"Quicksand", sans-serif',
+                    fontSize: "clamp(0.88rem, 1.1vw, 1rem)",
+                    fontWeight: 400,
+                    color: "rgba(245,245,245,0.55)",
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
+                  "{INTERVIEW_TIPS[tipIndex]}"
+                </motion.p>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
         .pre-interview-wrapper {
           position: relative;
@@ -435,7 +623,6 @@ export default function PreInterview() {
                 }
               />
             </div>
-            {/* CTA — spans full width */}
             <div
               style={{
                 gridColumn: "1 / -1",

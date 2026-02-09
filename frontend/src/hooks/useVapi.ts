@@ -28,6 +28,7 @@ export interface UseVapiReturn {
   error: string | null;
   startCall: () => Promise<void>;
   stopCall: () => void;
+  forceStop: () => void;
   toggleMute: () => void;
   transcript: TranscriptEntry[];
 }
@@ -167,6 +168,19 @@ export function useVapi({
     vapiRef.current.stop();
   }, []);
 
+  const forceStop = useCallback(() => {
+    if (!vapiRef.current) return;
+    try {
+      vapiRef.current.setMuted(true);
+    } catch {}
+    try {
+      vapiRef.current.stop();
+    } catch {}
+    setIsCallActive(false);
+    setIsLoading(false);
+    setIsMuted(false);
+  }, []);
+
   const toggleMute = useCallback(() => {
     if (!vapiRef.current || !isCallActive) return;
     const newMutedState = !isMuted;
@@ -181,6 +195,7 @@ export function useVapi({
     error,
     startCall,
     stopCall,
+    forceStop,
     toggleMute,
     transcript,
   };
