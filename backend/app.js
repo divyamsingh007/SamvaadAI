@@ -12,6 +12,7 @@ import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import vapiRoutes from "./routes/vapi.route.js";
 import interviewResponseRoutes from "./routes/interviewResponse.route.js";
+import resumeRoutes from "./routes/resume.route.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.middleware.js";
 import { apiLimiter } from "./middleware/rateLimiter.middleware.js";
 
@@ -54,6 +55,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vapi", vapiRoutes);
 app.use("/api/interview-responses", interviewResponseRoutes);
+app.use("/api/resume", resumeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

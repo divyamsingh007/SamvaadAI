@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import CtaButton from "../components/CtaButton";
-import { createInterview } from "../services/interview.service";
+import { createInterview, analyzeResume } from "../services/interview.service";
 
 const INTERVIEW_TIPS = [
   "Take a moment to structure your answer before speaking.",
@@ -256,6 +256,36 @@ export default function PreInterview() {
     setLoading(true);
 
     try {
+      // Step 1: Analyze Resume with Gemini first
+      let customQuestions: string[] | undefined = undefined;
+
+      if (resumeFile) {
+        // Optional UI loading update trick here if desired
+        const analyzeResponse = await analyzeResume(resumeFile);
+        if (analyzeResponse.success && analyzeResponse.data) {
+          console.log("%c==================================", "color: #03b3c3; font-weight: bold;");
+          console.log("%c🤖 AI RESUME ANALYSIS COMPLETE", "color: #03b3c3; font-size: 14px; font-weight: bold;");
+          console.log("%cATS Score:", "color: #ff9800; font-weight: bold;", analyzeResponse.data.analysis.ats_score + "/100");
+          console.log("%cStrengths:", "color: #4caf50; font-weight: bold;", analyzeResponse.data.analysis.strengths);
+          console.log("%cImprovement Areas:", "color: #e91e63; font-weight: bold;", analyzeResponse.data.analysis.weaknesses);
+          console.log("%cExtracted Skills:", "color: #9c27b0; font-weight: bold;", analyzeResponse.data.skills);
+          console.log("%cGenerated Interview Questions (Easy/Med/Hard):", "color: #2196f3; font-weight: bold;", analyzeResponse.data.interview_questions);
+          console.log("%cFull AI JSON Payload:", "color: #607d8b; font-weight: bold;", analyzeResponse.data);
+          console.log("%c==================================", "color: #03b3c3; font-weight: bold;");
+          
+          // Combine all questions for the interview flow
+          customQuestions = [
+            ...analyzeResponse.data.interview_questions.easy,
+            ...analyzeResponse.data.interview_questions.medium,
+            ...analyzeResponse.data.interview_questions.hard,
+          ];
+        } else {
+           // Provide an info log that we are falling back to generic interview creation
+           console.info("Info: AI Quota Exceeded. Skipping custom resume questions and falling back to default mock interview.", analyzeResponse.message);
+        }
+      }
+
+      // Step 2: Create the Interview session
       const response = await createInterview({
         type: "Technical",
         role,
@@ -263,6 +293,7 @@ export default function PreInterview() {
         techstack: focusArea || role,
         amount: 5,
         userid: "698656a085972488d244dff3",
+        customQuestions // Pass the generated questions down to the vapi controller
       });
 
       if (response.success && response.data) {
@@ -347,22 +378,22 @@ export default function PreInterview() {
               ))}
             </div>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.5 }}
-              style={{
-                fontFamily: '"Quicksand", sans-serif',
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                color: "rgba(245,245,245,0.4)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase" as const,
-                margin: 0,
-              }}
-            >
-              Preparing your interview…
-            </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            style={{
+              fontFamily: '"Quicksand", sans-serif',
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              color: "rgba(245,245,245,0.4)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase" as const,
+              margin: 0,
+            }}
+          >
+            {resumeFile ? "Analyzing Resume & Extracting Questions..." : "Preparing your interview…"}
+          </motion.p>
 
             {/* Minimal white shimmer bar */}
             <div

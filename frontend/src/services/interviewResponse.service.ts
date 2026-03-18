@@ -12,7 +12,7 @@ export interface SaveInterviewResponseRequest {
   }>;
   fullTranscript?: string[];
   vapiCallId?: string;
-  evaluation: InterviewFeedback;
+  evaluation?: InterviewFeedback;
   duration?: number;
 }
 

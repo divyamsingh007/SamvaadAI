@@ -10,11 +10,34 @@ export interface CreateInterviewRequest {
   techstack: string;
   amount: number;
   userid: string;
+  customQuestions?: string[];
 }
 
 export interface CreateInterviewResponse {
   success: boolean;
   data?: Interview;
+  message?: string;
+  error?: string;
+}
+
+export interface AnalyzeResumeResponse {
+  success: boolean;
+  data?: {
+    personal_info: any;
+    education: any[];
+    experience: any[];
+    skills: any;
+    analysis: {
+      ats_score: number;
+      strengths: string[];
+      weaknesses: string[];
+    };
+    interview_questions: {
+      easy: string[];
+      medium: string[];
+      hard: string[];
+    }
+  };
   message?: string;
   error?: string;
 }
@@ -35,7 +58,9 @@ export async function createInterview(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errData = await response.json().catch(() => ({}));
+      console.error("Backend error payload:", errData);
+      throw new Error(`HTTP error! status: ${response.status} - ${errData.message || ''}`);
     }
 
     return await response.json();
@@ -44,6 +69,36 @@ export async function createInterview(
     return {
       success: false,
       message: "Failed to create interview",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Uploads a resume PDF to be analyzed by the Gemini AI endpoint
+ */
+export async function analyzeResume(file: File): Promise<AnalyzeResumeResponse> {
+  try {
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    const response = await fetch(`${API_BASE_URL}/resume/analyze`, {
+      method: "POST",
+      body: formData, // No Content-Type header needed for FormData; browser sets it with boundary
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error("Backend error payload:", errData);
+      throw new Error(`HTTP error! status: ${response.status} - ${errData.message || ''}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error analyzing resume:", error);
+    return {
+      success: false,
+      message: "Failed to analyze resume",
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }

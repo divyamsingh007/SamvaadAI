@@ -14,7 +14,7 @@ const getRandomInterviewCover = () => {
 };
 
 export const generatePost = async (req, res) => {
-  const { type, role, level, techstack, amount, userid } = req.body;
+  const { type, role, level, techstack, amount, userid, customQuestions } = req.body;
 
   try {
     // Validate required fields
@@ -25,38 +25,58 @@ export const generatePost = async (req, res) => {
       });
     }
 
-    // Generate questions using Google Generative AI
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    let questions = [];
 
-    const prompt = `Prepare questions for a job interview.
-        The job role is ${role}.
-        The job experience level is ${level}.
-        The tech stack used in the job is: ${techstack}.
-        The focus between behavioural and technical questions should lean towards: ${type}.
-        The amount of questions required is: ${amount}.
-        Please return only the questions, without any additional text.
-        The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
-        Return the questions formatted like this:
-        ["Question 1", "Question 2", "Question 3"]
-        
-        Thank you! <3
-    `;
+    // Prioritize the custom generated AI resume questions if provided
+    if (customQuestions && Array.isArray(customQuestions) && customQuestions.length > 0) {
+      // Pick a random subset to match the "amount" requested to keep the interview at a manageable length
+      const shuffled = customQuestions.sort(() => 0.5 - Math.random());
+      questions = shuffled.slice(0, Math.min(amount, customQuestions.length));
+    } else {
+      // Generate generic questions using Google Generative AI
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+      const prompt = `Prepare questions for a job interview.
+          The job role is ${role}.
+          The job experience level is ${level}.
+          The tech stack used in the job is: ${techstack}.
+          The focus between behavioural and technical questions should lean towards: ${type}.
+          The amount of questions required is: ${amount}.
+          Please return only the questions, without any additional text.
+          The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
+          Return the questions formatted like this:
+          ["Question 1", "Question 2", "Question 3"]
+          
+          Thank you! <3
+      `;
 
-    // Parse the questions from the response
-    let questions;
-    try {
-      questions = JSON.parse(text);
-    } catch (parseError) {
-      // If parsing fails, try to extract JSON array from text
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        questions = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse questions from AI response");
+      try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Parse the questions from the response
+        try {
+          questions = JSON.parse(text);
+        } catch (parseError) {
+          // If parsing fails, try to extract JSON array from text
+          const jsonMatch = text.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            questions = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error("Failed to parse questions from AI response");
+          }
+        }
+      } catch (geminiError) {
+        console.warn("Gemini API limit exceeded. Falling back to default questions:", geminiError.message);
+        const fallback = [
+          `Can you describe a challenging project you've worked on recently?`,
+          `What are your primary strengths and weaknesses as a ${role}?`,
+          `How do you handle difficult technical problems involving ${techstack}?`,
+          `Can you explain a complex concept to a non-technical stakeholder?`,
+          `Describe a time when you had to resolve a conflict within your team.`
+        ];
+        questions = fallback.slice(0, Math.max(1, amount));
       }
     }
 

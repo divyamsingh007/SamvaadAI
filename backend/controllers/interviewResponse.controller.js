@@ -1,5 +1,6 @@
 import InterviewResponse from "../models/interviewResponse.model.js";
 import Interview from "../models/interview.model.js";
+import { evaluateInterviewTranscript } from "../services/evaluationService.js";
 
 // Save interview response after completion
 export const saveInterviewResponse = async (req, res) => {
@@ -9,16 +10,29 @@ export const saveInterviewResponse = async (req, res) => {
     qaTranscript,
     fullTranscript,
     vapiCallId,
-    evaluation,
     duration,
   } = req.body;
 
+  let { evaluation } = req.body;
+
   try {
     // Validate required fields
-    if (!interviewId || !userId || !evaluation) {
+    if (!interviewId || !userId) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: interviewId, userId, evaluation",
+        message: "Missing required fields: interviewId, userId",
+      });
+    }
+
+    // Force AI evaluation securely on backend if transcript is provided and evaluation is empty or generic
+    if (!evaluation && fullTranscript && fullTranscript.length > 0) {
+      console.log(`[AI Scorer]: Evaluating transcript for interview ${interviewId}...`);
+      evaluation = await evaluateInterviewTranscript(fullTranscript);
+      console.log(`[AI Scorer]: Successfully generated 40+ parameter scorecard!`);
+    } else if (!evaluation) {
+      return res.status(400).json({
+        success: false,
+        message: "Transcript required for AI Evaluation",
       });
     }
 

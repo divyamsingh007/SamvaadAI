@@ -16,172 +16,7 @@ const ANALYSIS_STEPS = [
   "Scoring relevance to role",
   "Generating personalised feedback",
 ];
-
-function evaluateTranscript(entries: TranscriptEntry[], questionCount: number) {
-  const userEntries = entries.filter((e) => e.isFinal && e.role === "user");
-
-  const totalUserWords = userEntries.reduce(
-    (sum, e) => sum + e.text.split(/\s+/).length,
-    0,
-  );
-  const avgWordsPerAnswer =
-    userEntries.length > 0 ? totalUserWords / userEntries.length : 0;
-  const answeredRatio = Math.min(
-    userEntries.length / Math.max(questionCount, 1),
-    1,
-  );
-
-  const hasSubstance = avgWordsPerAnswer >= 15;
-  const isDetailed = avgWordsPerAnswer >= 40;
-  const isVerbose = avgWordsPerAnswer > 120;
-
-  function catScore(base: number, variance: number): number {
-    const jitter = (Math.random() - 0.5) * variance;
-    return Math.max(50, Math.min(82, Math.round(base + jitter)));
-  }
-
-  let commBase = 58 + answeredRatio * 12;
-  if (hasSubstance) commBase += 5;
-  if (isDetailed) commBase += 4;
-  if (isVerbose) commBase -= 3;
-
-  let techBase = 55 + answeredRatio * 10;
-  if (isDetailed) techBase += 6;
-  if (totalUserWords > 200) techBase += 3;
-
-  let problemBase = 54 + answeredRatio * 10;
-  if (isDetailed) problemBase += 5;
-  if (avgWordsPerAnswer > 25) problemBase += 3;
-
-  let cultureBase = 60 + answeredRatio * 8;
-  if (hasSubstance) cultureBase += 4;
-
-  let confBase = 56 + answeredRatio * 12;
-  if (hasSubstance) confBase += 5;
-  if (isDetailed) confBase += 3;
-  if (isVerbose) confBase -= 4;
-
-  const categories: { name: string; score: number; comment: string }[] = [
-    {
-      name: "Communication Skills",
-      score: catScore(commBase, 6),
-      comment:
-        avgWordsPerAnswer >= 30
-          ? "Responses were clear and well-structured with good articulation."
-          : avgWordsPerAnswer >= 15
-            ? "Communication was adequate but could benefit from more detailed responses."
-            : "Responses were brief. Expanding on answers would improve clarity.",
-    },
-    {
-      name: "Technical Knowledge",
-      score: catScore(techBase, 7),
-      comment: isDetailed
-        ? "Demonstrated solid understanding of technical concepts discussed."
-        : hasSubstance
-          ? "Showed reasonable technical awareness but could go deeper on specifics."
-          : "Technical depth was limited. More concrete examples would strengthen responses.",
-    },
-    {
-      name: "Problem Solving",
-      score: catScore(problemBase, 6),
-      comment: isDetailed
-        ? "Good analytical approach when breaking down problems."
-        : "Problem-solving approach could be more structured with clearer reasoning.",
-    },
-    {
-      name: "Cultural Fit",
-      score: catScore(cultureBase, 5),
-      comment: hasSubstance
-        ? "Values and attitudes align reasonably well with team expectations."
-        : "Difficult to fully assess cultural fit from brief responses.",
-    },
-    {
-      name: "Confidence and Clarity",
-      score: catScore(confBase, 6),
-      comment: isDetailed
-        ? "Spoke confidently with clear, structured explanations."
-        : hasSubstance
-          ? "Showed adequate confidence but could be more assertive in delivery."
-          : "Would benefit from more confident and elaborate delivery.",
-    },
-  ];
-
-  const totalScore = Math.max(
-    50,
-    Math.min(
-      82,
-      Math.round(
-        categories.reduce((s, c) => s + c.score, 0) / categories.length,
-      ),
-    ),
-  );
-
-  const strengths: string[] = [];
-  const improvements: string[] = [];
-
-  if (commBase >= 68)
-    strengths.push(
-      "Good communication and articulation throughout the session.",
-    );
-  else
-    improvements.push(
-      "Work on providing more detailed and structured responses.",
-    );
-
-  if (techBase >= 65)
-    strengths.push("Solid technical understanding in the discussed areas.");
-  else
-    improvements.push(
-      "Strengthen technical depth with specific examples and terminology.",
-    );
-
-  if (answeredRatio >= 0.8)
-    strengths.push("Engaged well with most of the interview questions.");
-  else
-    improvements.push(
-      "Try to address all questions asked during the interview.",
-    );
-
-  if (isDetailed)
-    strengths.push("Provided detailed answers showing depth of thought.");
-  else
-    improvements.push(
-      "Aim for more comprehensive answers — 60 to 90 seconds per response.",
-    );
-
-  if (isVerbose)
-    improvements.push("Consider being more concise to keep answers focused.");
-
-  if (confBase >= 68)
-    strengths.push("Confident delivery with clear explanations.");
-  else
-    improvements.push("Practice speaking with more confidence and conviction.");
-
-  if (strengths.length === 0)
-    strengths.push("Completed the interview and showed willingness to engage.");
-  if (improvements.length === 0)
-    improvements.push("Continue refining responses for even greater impact.");
-
-  let assessment: string;
-  if (totalScore >= 75) {
-    assessment =
-      "Strong performance overall with clear strengths in communication and knowledge. Well-prepared candidate suitable for further consideration.";
-  } else if (totalScore >= 65) {
-    assessment =
-      "Adequate performance with room for growth. Demonstrated baseline competence and should focus on deepening technical responses and providing more specific examples.";
-  } else {
-    assessment =
-      "Shows potential but needs further preparation. Focusing on more detailed responses, concrete examples, and confident delivery will lead to significant improvement.";
-  }
-
-  return {
-    totalScore,
-    categoryScores: categories,
-    strengths,
-    areasForImprovement: improvements,
-    finalAssessment: assessment,
-  };
-}
+// AI Evaluation is now securely handled on the backend via Gemini
 
 const MicIcon = () => (
   <svg
@@ -249,7 +84,6 @@ export default function InterviewSession() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [analysing, setAnalysing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
-  const pendingNavRef = useRef<{ state: any } | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -291,6 +125,7 @@ export default function InterviewSession() {
     onCallEnd: () => {
       // Skip if confirmEnd already started the analysis loader
       if (analysing) return;
+      setAnalysing(true);
 
       const duration = callStartTime
         ? Math.floor((Date.now() - callStartTime) / 1000)
@@ -303,42 +138,32 @@ export default function InterviewSession() {
             `${e.role === "assistant" ? "Interviewer" : "You"}: ${e.text}`,
         );
 
-      const questionCount = interview?.questions?.length || 3;
-      const evaluation = evaluateTranscript(transcript, questionCount);
-
-      // Navigate with analysis loader
       if (interview) {
         const interviewId = interview.id || interview._id;
 
-        // Fire-and-forget save in background
         if (interviewId) {
           saveInterviewResponse({
             interviewId,
             userId: interview.userId,
             fullTranscript: finalTranscript,
-            evaluation,
             duration,
           }).then((result) => {
             if (result.success && result.data) {
-              // Already on results page via state
+              const aiEvaluation = result.data.evaluation;
+              navigate("/results", {
+                state: {
+                  interview,
+                  transcript: finalTranscript,
+                  evaluation: aiEvaluation,
+                },
+              });
+            } else {
+              navigate("/results", { state: { interview, transcript: finalTranscript } });
             }
-          });
+          }).catch(console.error);
+        } else {
+           navigate("/results", { state: { interview, transcript: finalTranscript } });
         }
-
-        // Store nav state and show analysis loader
-        pendingNavRef.current = {
-          state: {
-            interview,
-            transcript: finalTranscript,
-            evaluation,
-          },
-        };
-        setAnalysing(true);
-        setTimeout(() => {
-          navigate("/results", {
-            state: pendingNavRef.current?.state,
-          });
-        }, 8000);
       }
     },
     onMessage: (_message: any) => {},
@@ -400,7 +225,8 @@ export default function InterviewSession() {
       // ignore errors, we're leaving anyway
     }
 
-    // Compute results directly instead of relying on onCallEnd
+    setAnalysing(true);
+
     const duration = callStartTime
       ? Math.floor((Date.now() - callStartTime) / 1000)
       : 0;
@@ -412,39 +238,32 @@ export default function InterviewSession() {
           `${e.role === "assistant" ? "Interviewer" : "You"}: ${e.text}`,
       );
 
-    const questionCount = interview?.questions?.length || 3;
-    const evaluation = evaluateTranscript(transcript, questionCount);
-
     if (interview) {
       const interviewId = interview.id || interview._id;
 
-      // Save in background
       if (interviewId) {
-        saveInterviewResponse({
+         saveInterviewResponse({
           interviewId,
           userId: interview.userId,
           fullTranscript: finalTranscript,
-          evaluation,
           duration,
-        }).catch(() => {});
+        }).then((result) => {
+          if (result.success && result.data) {
+            navigate("/results", {
+              state: {
+                interview,
+                transcript: finalTranscript,
+                evaluation: result.data.evaluation,
+              },
+            });
+          } else {
+             navigate("/results", { state: { interview, transcript: finalTranscript } });
+          }
+        }).catch(console.error);
+      } else {
+         navigate("/results", { state: { interview, transcript: finalTranscript } });
       }
-
-      pendingNavRef.current = {
-        state: {
-          interview,
-          transcript: finalTranscript,
-          evaluation,
-        },
-      };
     }
-
-    // Show analysis loader and navigate after delay
-    setAnalysing(true);
-    setTimeout(() => {
-      navigate("/results", {
-        state: pendingNavRef.current?.state ?? {},
-      });
-    }, 8000);
   }, [forceStop, callStartTime, transcript, interview, navigate]);
 
   if (loading) {
