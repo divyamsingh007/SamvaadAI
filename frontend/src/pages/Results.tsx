@@ -116,8 +116,7 @@ export default function Results() {
     (location.state as any)?.evaluation ||
     FALLBACK_DATA;
 
-  const interviewInfo =
-    responseData?.interviewId || (location.state as any)?.interview;
+  // interviewInfo unused constant removed to pass strict TypeScript build
 
   // Map the data structure
   const data = {

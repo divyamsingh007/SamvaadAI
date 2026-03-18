@@ -214,13 +214,13 @@ export default function InterviewExample() {
           overflowY: "auto",
         }}>
           <h3 style={{ marginBottom: "1rem" }}>Transcript</h3>
-          {transcript.map((text: string, index: number) => (
+          {transcript.map((entry: any, index: number) => (
             <p key={index} style={{ 
               marginBottom: "0.5rem",
               fontSize: "0.9rem",
               lineHeight: 1.6,
             }}>
-              {text}
+              {entry.text || typeof entry === 'string' ? entry : ''}
             </p>
           ))}
         </div>
