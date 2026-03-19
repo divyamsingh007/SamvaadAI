@@ -79,7 +79,7 @@ ${transcriptText}
       categoryScores: [{ name: "Error", score: 50, comment: "Failed to accurately parse AI response." }],
       strengths: ["Completed the interview."],
       areasForImprovement: ["Review response format."],
-      finalAssessment: "An error occurred while evaluating the interview transcript via AI. Please try again."
+      finalAssessment: "An error occurred while evaluating the interview transcript. Please try again."
     };
   }
 };
