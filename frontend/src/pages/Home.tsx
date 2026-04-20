@@ -110,6 +110,7 @@ export default function Home() {
     sessionStorage.getItem("samvaad_preloader_shown") === "1",
   );
   const [loading, setLoading] = useState(!hasSeenPreloader.current);
+  const [dashHover, setDashHover] = useState(false);
 
   useEffect(() => {
     if (hasSeenPreloader.current) return;
@@ -246,8 +247,8 @@ export default function Home() {
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           <Hyperspeed
             effectOptions={{
-              onSpeedUp: () => {},
-              onSlowDown: () => {},
+              onSpeedUp: () => { },
+              onSlowDown: () => { },
               distortion: "turbulentDistortion",
               length: 400,
               roadWidth: 10,
@@ -345,30 +346,73 @@ export default function Home() {
           }}
         >
           {user ? (
-            <button
-              onClick={() => navigate("/dashboard")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                color: "rgba(245, 245, 245, 0.6)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: '"Quicksand", sans-serif',
-                fontSize: "0.95rem",
-                fontWeight: 600,
-                transition: "color 0.2s ease",
-              }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.color = "#F5F5F5")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.color = "rgba(245, 245, 245, 0.6)")
-              }
+            <div
+              style={{ position: "relative" }}
+              onMouseEnter={() => setDashHover(true)}
+              onMouseLeave={() => setDashHover(false)}
             >
-              <LayoutDashboard size={16} /> Dashboard
-            </button>
+              <button
+                onClick={() => navigate("/dashboard")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  color: dashHover ? "#F5F5F5" : "rgba(245, 245, 245, 0.6)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: '"Quicksand", sans-serif',
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  transition: "color 0.2s ease",
+                }}
+              >
+                <LayoutDashboard size={16} /> Dashboard
+              </button>
+
+              {/* Custom tooltip */}
+              <AnimatePresence>
+                {dashHover && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 0.5rem)",
+                      right: 0,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 10,
+                      padding: "0.6rem 0.9rem",
+                      pointerEvents: "none",
+                      zIndex: 100,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: '"Bricolage Grotesque", sans-serif',
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      color: "#F5F5F5",
+                    }}>
+                      {user?.firstName && user?.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : user?.username}
+                    </span>
+                    <div style={{
+                      fontFamily: '"Quicksand", sans-serif',
+                      fontSize: "0.7rem",
+                      color: "rgba(245,245,245,0.3)",
+                      marginTop: 2,
+                    }}>
+                      {user?.email}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <button
@@ -527,13 +571,15 @@ export default function Home() {
             style={{
               fontFamily: '"Quicksand", sans-serif',
               fontSize: "0.8rem",
-              color: "rgba(245, 245, 245, 0.4)",
+              color: "rgba(245, 245, 245, 0.6)",
               marginTop: "1rem",
               fontWeight: 400,
               letterSpacing: "0.02em",
             }}
           >
-            No signup required
+            {user
+              ? `Welcome back, ${user.firstName || user.username} ✦`
+              : "Track your progress — sign up"}
           </motion.p>
         </div>
 
