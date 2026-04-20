@@ -147,8 +147,12 @@ export const logout = async (req, res) => {
     const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (req.user) {
-      const redis = redisClient();
-      await redis.del(String(req.user.id));
+      try {
+        const redis = redisClient();
+        await redis.del(String(req.user.id));
+      } catch (redisError) {
+        console.warn('⚠️ Redis logout cleanup failed:', redisError.message);
+      }
       
       if (refreshToken) {
         await User.findByIdAndUpdate(req.user.id, {
@@ -177,8 +181,12 @@ export const logout = async (req, res) => {
 export const logoutAll = async (req, res) => {
   try {
     if (req.user) {
-      const redis = redisClient();
-      await redis.del(String(req.user.id));
+      try {
+        const redis = redisClient();
+        await redis.del(String(req.user.id));
+      } catch (redisError) {
+        console.warn('⚠️ Redis logoutAll cleanup failed:', redisError.message);
+      }
 
       await User.findByIdAndUpdate(req.user.id, {
         $set: { refreshTokens: [] },
@@ -215,10 +223,18 @@ export const refreshAccessToken = async (req, res) => {
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    const redis = redisClient();
-    const user = await redis.get(String(decoded.id));
+    let redisAvailable = true;
+    let user = null;
+    try {
+      const redis = redisClient();
+      user = await redis.get(String(decoded.id));
+    } catch (redisError) {
+      console.warn('⚠️ Redis refresh check failed:', redisError.message);
+      redisAvailable = false;
+    }
     
-    if (!user) {
+    // Only reject for missing session if Redis is actually reachable
+    if (redisAvailable && !user) {
       return res.status(401).json({
         success: false,
         message: 'Session expired. Please login again.',
@@ -256,17 +272,22 @@ export const refreshAccessToken = async (req, res) => {
     dbUser.refreshTokens.push({ token: newRefreshToken });
     await dbUser.save();
 
-    await redis.set(String(dbUser._id), {
-      _id: dbUser._id,
-      username: dbUser.username,
-      email: dbUser.email,
-      role: dbUser.role,
-      isActive: dbUser.isActive,
-      isEmailVerified: dbUser.isEmailVerified,
-      lastLogin: dbUser.lastLogin,
-    }, {
-      ex: 7 * 24 * 60 * 60,
-    });
+    try {
+      const redisForRefresh = redisClient();
+      await redisForRefresh.set(String(dbUser._id), {
+        _id: dbUser._id,
+        username: dbUser.username,
+        email: dbUser.email,
+        role: dbUser.role,
+        isActive: dbUser.isActive,
+        isEmailVerified: dbUser.isEmailVerified,
+        lastLogin: dbUser.lastLogin,
+      }, {
+        ex: 7 * 24 * 60 * 60,
+      });
+    } catch (redisError) {
+      console.warn('⚠️ Redis refresh cache write failed:', redisError.message);
+    }
 
     setCookies(res, newAccessToken, newRefreshToken);
 
@@ -298,9 +319,14 @@ export const refreshAccessToken = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const redis = redisClient();
-    
-    const cachedUser = await redis.get(String(req.user.id));
+    let cachedUser = null;
+    try {
+      const redis = redisClient();
+      cachedUser = await redis.get(String(req.user.id));
+    } catch (redisError) {
+      console.warn('⚠️ Redis getMe cache read failed:', redisError.message);
+    }
+
     if (cachedUser) {
       return res.status(200).json({
         success: true,
@@ -331,9 +357,14 @@ export const getMe = async (req, res) => {
       updatedAt: user.updatedAt,
     };
 
-    await redis.set(String(req.user.id), userData, {
-      ex: 7 * 24 * 60 * 60,
-    });
+    try {
+      const redis = redisClient();
+      await redis.set(String(req.user.id), userData, {
+        ex: 7 * 24 * 60 * 60,
+      });
+    } catch (redisError) {
+      console.warn('⚠️ Redis getMe cache write failed:', redisError.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -390,18 +421,22 @@ export const updateProfile = async (req, res) => {
 
     await user.save();
 
-    const redis = redisClient();
-    await redis.set(String(req.user.id), {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      isEmailVerified: user.isEmailVerified,
-      lastLogin: user.lastLogin,
-    }, {
-      ex: 7 * 24 * 60 * 60,
-    });
+    try {
+      const redis = redisClient();
+      await redis.set(String(req.user.id), {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        isEmailVerified: user.isEmailVerified,
+        lastLogin: user.lastLogin,
+      }, {
+        ex: 7 * 24 * 60 * 60,
+      });
+    } catch (redisError) {
+      console.warn('⚠️ Redis profile update cache failed:', redisError.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -463,8 +498,12 @@ export const changePassword = async (req, res) => {
     
     await user.save();
 
-    const redis = redisClient();
-    await redis.del(String(user._id));
+    try {
+      const redis = redisClient();
+      await redis.del(String(user._id));
+    } catch (redisError) {
+      console.warn('⚠️ Redis password change cleanup failed:', redisError.message);
+    }
 
     res.status(200).json({
       success: true,

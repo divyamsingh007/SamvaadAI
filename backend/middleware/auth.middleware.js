@@ -26,14 +26,13 @@ export const protect = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const redis = redisClient();
-      const userSession = await redis.get(String(decoded.id));
-
-      if (!userSession) {
-        return res.status(401).json({
-          success: false,
-          message: 'Session expired. Please login again.',
-        });
+      // Try Redis session cache first, but don't block auth if Redis is down
+      let userSession = null;
+      try {
+        const redis = redisClient();
+        userSession = await redis.get(String(decoded.id));
+      } catch (redisError) {
+        console.warn('⚠️ Redis session check failed, falling back to DB:', redisError.message);
       }
 
       req.user = await User.findById(decoded.id).select('-password');

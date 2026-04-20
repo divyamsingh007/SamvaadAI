@@ -110,7 +110,7 @@ export const getInterviewResponse = async (req, res) => {
 
 // Get all interview responses for a user
 export const getUserInterviewResponses = async (req, res) => {
-  const { userId } = req.query;
+  const { userId } = { ...req.query, ...req.params };
 
   try {
     if (!userId) {

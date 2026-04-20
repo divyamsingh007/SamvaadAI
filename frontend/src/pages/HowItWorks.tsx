@@ -206,6 +206,28 @@ export default function HowItWorks() {
             Samvaad
             <span style={{ color: "#03b3c3", fontWeight: 800 }}>AI</span>
           </span>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              color: "rgba(245,245,245,0.6)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: '"Quicksand", sans-serif',
+              fontSize: "0.95rem",
+              transition: "color 0.2s ease",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.color = "#F5F5F5")}
+            onMouseOut={(e) =>
+              (e.currentTarget.style.color = "rgba(245,245,245,0.6)")
+            }
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back
+          </button>
         </div>
 
         <div

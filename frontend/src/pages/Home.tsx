@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "../contexts/AuthContext";
 import Hyperspeed from "../components/Hyperspeed";
 import Dock from "../components/Dock";
 import CtaButton from "../components/CtaButton";
+import { LayoutDashboard, LogIn, UserPlus } from "lucide-react";
 
 const smooth = { type: "spring" as const, damping: 30, stiffness: 120 };
 
@@ -103,6 +105,7 @@ const AboutUsIcon = () => (
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hasSeenPreloader = useRef(
     sessionStorage.getItem("samvaad_preloader_shown") === "1",
   );
@@ -316,6 +319,108 @@ export default function Home() {
               AI
             </span>
           </span>
+        </motion.div>
+
+        {/* ── Auth Buttons — slides in from the right ── */}
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, x: 28, filter: "blur(4px)" },
+            visible: {
+              opacity: 1,
+              x: 0,
+              filter: "blur(0px)",
+              transition: { ...smooth, delay: 0.15 },
+            },
+          }}
+          initial="hidden"
+          animate={loading ? "hidden" : "visible"}
+          style={{
+            position: "absolute",
+            top: "1.5rem",
+            right: "2rem",
+            zIndex: 10,
+            display: "flex",
+            gap: "1rem",
+            alignItems: "center",
+          }}
+        >
+          {user ? (
+            <button
+              onClick={() => navigate("/dashboard")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                color: "rgba(245, 245, 245, 0.6)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: '"Quicksand", sans-serif',
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                transition: "color 0.2s ease",
+              }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.color = "#F5F5F5")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.color = "rgba(245, 245, 245, 0.6)")
+              }
+            >
+              <LayoutDashboard size={16} /> Dashboard
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate("/signin")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  color: "rgba(245, 245, 245, 0.6)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: '"Quicksand", sans-serif',
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  transition: "color 0.2s ease",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.color = "#F5F5F5")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.color = "rgba(245, 245, 245, 0.6)")
+                }
+              >
+                <LogIn size={16} /> Sign In
+              </button>
+              <button
+                onClick={() => navigate("/signup")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  color: "rgba(245, 245, 245, 0.6)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: '"Quicksand", sans-serif',
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  transition: "color 0.2s ease",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.color = "#F5F5F5")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.color = "rgba(245, 245, 245, 0.6)")
+                }
+              >
+                <UserPlus size={16} /> Sign Up
+              </button>
+            </>
+          )}
         </motion.div>
 
         {/* ── Hero content ── */}

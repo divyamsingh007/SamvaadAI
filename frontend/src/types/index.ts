@@ -25,3 +25,14 @@ export interface InterviewFeedback {
   areasForImprovement: string[];
   finalAssessment: string;
 }
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  isActive: boolean;
+  isEmailVerified: boolean;
+}

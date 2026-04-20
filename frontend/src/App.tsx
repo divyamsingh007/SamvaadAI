@@ -7,19 +7,29 @@ import PreInterview from "./pages/PreInterview";
 // import Interview from "./pages/Interview";
 import InterviewSession from "./pages/VapiInterview";
 import Results from "./pages/Results";
+import Signin from "./pages/Signin";
+import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
+import { AuthProvider } from "./contexts/AuthContext";
+
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/pre-interview" element={<PreInterview />} />
-      {/* <Route path="/interview" element={<Interview />} /> */}
-      <Route path="/interview/:id" element={<InterviewSession />} />
-      <Route path="/results" element={<Results />} />
-      <Route path="/results/:id" element={<Results />} />
-      <Route path="/how-it-works" element={<HowItWorks />} />
-      <Route path="/about-us" element={<AboutUs />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/pre-interview" element={<PreInterview />} />
+        {/* <Route path="/interview" element={<Interview />} /> */}
+        <Route path="/interview/:id" element={<InterviewSession />} />
+        <Route path="/results" element={<Results />} />
+        <Route path="/results/:id" element={<Results />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/signin" element={<Signin />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </AuthProvider>
   );
 }
 

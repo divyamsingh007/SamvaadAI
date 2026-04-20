@@ -32,18 +32,23 @@ export const sendToken = async (user, statusCode, res) => {
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
 
-  const redis = redisClient();
-  await redis.set(String(user._id), {
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    isActive: user.isActive,
-    isEmailVerified: user.isEmailVerified,
-    lastLogin: user.lastLogin,
-  }, {
-    ex: 7 * 24 * 60 * 60,
-  });
+  // Cache user session in Redis (non-blocking — auth still works via JWT if Redis is down)
+  try {
+    const redis = redisClient();
+    await redis.set(String(user._id), {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      isEmailVerified: user.isEmailVerified,
+      lastLogin: user.lastLogin,
+    }, {
+      ex: 7 * 24 * 60 * 60,
+    });
+  } catch (redisError) {
+    console.warn('⚠️ Redis cache write failed (auth will still work via JWT):', redisError.message);
+  }
 
   if (process.env.NODE_ENV === 'production') {
     accessTokenOptions.secure = true;
