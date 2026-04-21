@@ -410,7 +410,7 @@ export default function Dashboard() {
                   <motion.div variants={fadeUp(0.45)} initial="hidden" animate="visible" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginTop: "1rem" }}>
                     <Zap size={36} style={{ color: "#03b3c3", opacity: 0.5, marginBottom: "1rem" }} />
                     <p style={{ fontFamily: '"Quicksand", sans-serif', fontSize: "clamp(1rem, 1.2vw, 1.2rem)", lineHeight: 1.7, color: "rgba(247,247,242,0.55)", marginBottom: "1.5rem" }}>Complete your first AI mock interview to unlock<br />analytics, skill breakdowns, and personalised feedback.</p>
-                    <button onClick={() => navigate("/")} className="cta-btn">Begin Mock Interview →</button>
+                    <button onClick={() => navigate("/pre-interview")} className="cta-btn">Begin Mock Interview →</button>
                   </motion.div>
                 )}
               </motion.div>
