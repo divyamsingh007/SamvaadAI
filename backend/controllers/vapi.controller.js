@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Interview from "../models/interview.model.js";
+import User from "../models/user.model.js";
+import jwt from "jsonwebtoken";
+import { redisClient } from "../config/redis.config.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -14,21 +17,35 @@ const getRandomInterviewCover = () => {
 };
 
 export const generatePost = async (req, res) => {
-  const { type, role, level, techstack, amount, userid, customQuestions } = req.body;
+  const { type, role, level, techstack, amount, customQuestions } = req.body;
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({
+      success: false,
+      message: "Refresh token is required",
+    });
+  }
 
+  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const userid = decoded.id;
   try {
     // Validate required fields
-    if (!type || !role || !level || !techstack || !amount || !userid) {
+    if (!type || !role || !level || !techstack || !amount) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: type, role, level, techstack, amount, userid",
+        message:
+          "Missing required fields: type, role, level, techstack, amount, userid",
       });
     }
 
     let questions = [];
 
     // Prioritize the custom generated AI resume questions if provided
-    if (customQuestions && Array.isArray(customQuestions) && customQuestions.length > 0) {
+    if (
+      customQuestions &&
+      Array.isArray(customQuestions) &&
+      customQuestions.length > 0
+    ) {
       // Pick a random subset to match the "amount" requested to keep the interview at a manageable length
       const shuffled = customQuestions.sort(() => 0.5 - Math.random());
       questions = shuffled.slice(0, Math.min(amount, customQuestions.length));
@@ -68,13 +85,16 @@ export const generatePost = async (req, res) => {
           }
         }
       } catch (geminiError) {
-        console.warn("Gemini API limit exceeded. Falling back to default questions:", geminiError.message);
+        console.warn(
+          "Gemini API limit exceeded. Falling back to default questions:",
+          geminiError.message,
+        );
         const fallback = [
           `Can you describe a challenging project you've worked on recently?`,
           `What are your primary strengths and weaknesses as a ${role}?`,
           `How do you handle difficult technical problems involving ${techstack}?`,
           `Can you explain a complex concept to a non-technical stakeholder?`,
-          `Describe a time when you had to resolve a conflict within your team.`
+          `Describe a time when you had to resolve a conflict within your team.`,
         ];
         questions = fallback.slice(0, Math.max(1, amount));
       }
@@ -85,7 +105,7 @@ export const generatePost = async (req, res) => {
       role,
       type,
       level,
-      techstack: techstack.split(",").map(tech => tech.trim()),
+      techstack: techstack.split(",").map((tech) => tech.trim()),
       questions,
       userId: userid,
       finalized: true,
@@ -93,7 +113,7 @@ export const generatePost = async (req, res) => {
     });
 
     await interview.save();
-
+    await User.findByIdAndUpdate(userid, { $push: { interviews: interview._id } });
     res.status(200).json({
       success: true,
       data: interview,
@@ -125,19 +145,33 @@ export const generateGet = async (req, res) => {
 
 // Get all interviews for a user
 export const getUserInterviews = async (req, res) => {
-  const { userId } = req.query;
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({
+      success: false,
+      message: "Refresh token is required",
+    });
+  }
+
+  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const userid = decoded.id;
 
   try {
-    if (!userId) {
+    if (!userid) {
       return res.status(400).json({
         success: false,
-        message: "userId is required",
+        message: "userid is required",
       });
     }
+    const user = await User.findById(userid).populate("interviews").lean();
 
-    const interviews = await Interview.find({ userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const interviews = user.interviews || [];
 
     res.status(200).json({
       success: true,
@@ -185,9 +219,20 @@ export const getInterview = async (req, res) => {
 export const deleteInterview = async (req, res) => {
   const { id } = req.params;
 
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({
+      success: false,
+      message: "Refresh token is required",
+    });
+  }
+
+  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const userid = decoded.id;
+
   try {
     const interview = await Interview.findByIdAndDelete(id);
-
+    const user = await User.findByIdAndUpdate(userid, { $pull: { interviews: id } });
     if (!interview) {
       return res.status(404).json({
         success: false,
