@@ -1,6 +1,5 @@
 import type { InterviewFeedback } from "../types";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import { apiFetch } from "../lib/apiFetch";
 
 export interface SaveInterviewResponseRequest {
   interviewId: string;
@@ -42,7 +41,7 @@ export async function saveInterviewResponse(
 ): Promise<{ success: boolean; data?: InterviewResponseData; message?: string }> {
   try {
     console.log("Saving interview response:", data);
-    const response = await fetch(`${API_BASE_URL}/interview-responses`, {
+    const response = await apiFetch(`/interview-responses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -74,7 +73,7 @@ export async function getInterviewResponse(
 ): Promise<InterviewResponseData | null> {
   try {
     console.log(`Fetching interview response with ID: ${responseId}`);
-    const response = await fetch(`${API_BASE_URL}/interview-responses/${responseId}`);
+    const response = await apiFetch(`/interview-responses/${responseId}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -96,7 +95,7 @@ export async function getUserInterviewResponses(
   userId: string
 ): Promise<InterviewResponseData[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/interview-responses/user/${userId}`);
+    const response = await apiFetch(`/interview-responses/user/${userId}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -115,7 +114,7 @@ export async function getUserInterviewResponses(
  */
 export async function deleteInterviewResponse(responseId: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/interview-responses/${responseId}`, {
+    const response = await apiFetch(`/interview-responses/${responseId}`, {
       method: "DELETE",
     });
 

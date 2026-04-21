@@ -1,7 +1,5 @@
 import type { Interview } from "../types";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import { apiFetch } from "../lib/apiFetch";
 
 export interface CreateInterviewRequest {
   type: string;
@@ -9,7 +7,6 @@ export interface CreateInterviewRequest {
   level: string;
   techstack: string;
   amount: number;
-  userid: string;
   customQuestions?: string[];
 }
 
@@ -49,7 +46,7 @@ export async function createInterview(
   data: CreateInterviewRequest,
 ): Promise<CreateInterviewResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/vapi/generate`, {
+    const response = await apiFetch(`/vapi/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +79,7 @@ export async function analyzeResume(file: File): Promise<AnalyzeResumeResponse> 
     const formData = new FormData();
     formData.append("resume", file);
 
-    const response = await fetch(`${API_BASE_URL}/resume/analyze`, {
+    const response = await apiFetch(`/resume/analyze`, {
       method: "POST",
       body: formData, // No Content-Type header needed for FormData; browser sets it with boundary
     });
@@ -109,7 +106,7 @@ export async function analyzeResume(file: File): Promise<AnalyzeResumeResponse> 
  */
 export async function getUserInterviews(userId: string): Promise<Interview[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/interviews?userId=${userId}`);
+    const response = await apiFetch(`/interviews?userId=${userId}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -130,9 +127,7 @@ export async function getInterview(
   interviewId: string,
 ): Promise<Interview | null> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/vapi/interviews/${interviewId}`,
-    );
+    const response = await apiFetch(`/vapi/interviews/${interviewId}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -157,7 +152,7 @@ export async function getInterview(
  */
 export async function deleteInterview(interviewId: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/interviews/${interviewId}`, {
+    const response = await apiFetch(`/interviews/${interviewId}`, {
       method: "DELETE",
     });
 

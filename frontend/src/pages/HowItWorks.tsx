@@ -352,7 +352,7 @@ export default function HowItWorks() {
             }}
           >
             <CtaButton
-              text="Start Mock Interview"
+              text="Begin Mock Interview Now"
               onClick={() => navigate("/pre-interview")}
             />
             <span

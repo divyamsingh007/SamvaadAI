@@ -5,6 +5,13 @@ const pdfParseModule = require("pdf-parse");
 const pdfParse = pdfParseModule.default || pdfParseModule;
 import { analyzeResumeContent } from "../services/resumeService.js";
 
+const safeDeleteFile = (filePath) => {
+  if (!filePath) return;
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+};
+
 export const uploadAndAnalyzeResume = async (req, res) => {
   try {
     if (!req.file) {
@@ -22,15 +29,15 @@ export const uploadAndAnalyzeResume = async (req, res) => {
       extractedText = data.text;
     } else {
       // Clean up uploaded file before sending error
-      fs.unlinkSync(path);
+      safeDeleteFile(path);
       return res.status(400).json({
         success: false,
         message: "Unsupported file type. Please upload a PDF.",
       });
     }
 
-    // Pass to Gemini AI Service
-    console.log(`[Resume Analyzer]: Starting text extraction via Gemini AI...`);
+    // Pass to AI resume analysis service
+    console.log(`[Resume Analyzer]: Starting text extraction via AI model...`);
     const analysisResult = await analyzeResumeContent(extractedText);
     
     // Log the entire parsed response explicitly
@@ -38,7 +45,7 @@ export const uploadAndAnalyzeResume = async (req, res) => {
     console.log(JSON.stringify(analysisResult, null, 2));
 
     // Clean up temporary file
-    fs.unlinkSync(path);
+    safeDeleteFile(path);
 
     res.status(200).json({
       success: true,
@@ -48,14 +55,13 @@ export const uploadAndAnalyzeResume = async (req, res) => {
     console.error("Error processing resume:", error);
     
     // Ensure we attempt to clean up the file on error
-    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (req.file && req.file.path) {
+      safeDeleteFile(req.file.path);
     }
 
-    res.status(200).json({
+    res.status(500).json({
       success: false,
-      message: error.message || "AI Analysis quota exceeded. Proceeding with standard mock interview.",
-      error: error.stack || error.toString(),
+      message: "Failed to analyze resume. Please try again.",
     });
   }
 };

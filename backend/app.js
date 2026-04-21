@@ -7,7 +7,6 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import connectDB from "./config/database.config.js";
-import { redisClient } from "./config/redis.config.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import vapiRoutes from "./routes/vapi.route.js";
@@ -37,7 +36,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(cookieParser());
 
-app.use('/api/', apiLimiter);
+// app.use('/api/', apiLimiter);
 
 app.get("/", (req, res) => {
   res.json({
@@ -52,7 +51,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/users", userRoutes); //admin routes for user management (list, delete, etc.)
 app.use("/api/vapi", vapiRoutes);
 app.use("/api/interview-responses", interviewResponseRoutes);
 app.use("/api/resume", resumeRoutes);

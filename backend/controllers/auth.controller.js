@@ -600,7 +600,8 @@ export const resetPassword = async (req, res) => {
     user.refreshTokens = [];
     
     await user.save();
-
+    const redis = redisClient();
+    await redis.del(String(user._id));
     res.status(200).json({
       success: true,
       message: 'Password reset successful. Please login with your new password.',

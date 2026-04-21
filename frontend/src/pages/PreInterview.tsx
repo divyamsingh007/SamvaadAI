@@ -292,7 +292,6 @@ export default function PreInterview() {
         level: experienceToLevel[experience] || "Mid-Level",
         techstack: focusArea || role,
         amount: 5,
-        userid: "698656a085972488d244dff3",
         customQuestions // Pass the generated questions down to the vapi controller
       });
 

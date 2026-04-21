@@ -29,17 +29,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // On mount, check if we have a stored token and validate it
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        const res = await authService.getMe();
-        if (res.success && res.user) {
-          setUser(res.user);
-        } else {
-          // Token is invalid or expired — clean up
-          localStorage.removeItem("accessToken");
-          setUser(null);
+      const meResponse = await authService.getMe();
+
+      if (meResponse.success && meResponse.user) {
+        setUser(meResponse.user);
+        setIsLoading(false);
+        return;
+      }
+
+      // If access token is missing/expired but refresh cookie is valid,
+      // request a fresh access token and retry session fetch once.
+      const refreshResponse = await authService.refreshAccessToken();
+      if (refreshResponse.success) {
+        const retryMeResponse = await authService.getMe();
+        if (retryMeResponse.success && retryMeResponse.user) {
+          setUser(retryMeResponse.user);
+          setIsLoading(false);
+          return;
         }
       }
+
+      localStorage.removeItem("accessToken");
+      setUser(null);
       setIsLoading(false);
     };
 
