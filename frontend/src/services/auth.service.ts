@@ -1,7 +1,5 @@
 import type { User } from "../types";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+import { apiFetch } from "../lib/apiFetch";
 
 export interface AuthResponse {
   success: boolean;
@@ -10,6 +8,10 @@ export interface AuthResponse {
   user?: User;
   accessToken?: string;
   error?: string;
+}
+
+function extractAccessToken(payload: any): string | undefined {
+  return payload?.accessToken || payload?.data?.accessToken || payload?.token;
 }
 
 function getStoredToken(): string | null {
@@ -37,10 +39,9 @@ export const authService = {
     lastName?: string;
   }): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await apiFetch(`/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -71,10 +72,9 @@ export const authService = {
     password: string;
   }): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await apiFetch(`/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -99,10 +99,9 @@ export const authService = {
 
   async logout(): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      const response = await apiFetch(`/auth/logout`, {
         method: "POST",
         headers: authHeaders(),
-        credentials: "include",
       });
 
       const result = await response.json().catch(() => ({}));
@@ -118,15 +117,9 @@ export const authService = {
 
   async getMe(): Promise<AuthResponse> {
     try {
-      const token = getStoredToken();
-      if (!token) {
-        return { success: false, message: "No token found" };
-      }
-
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      const response = await apiFetch(`/auth/me`, {
         method: "GET",
         headers: authHeaders(),
-        credentials: "include",
       });
 
       const result = await response.json().catch(() => ({}));
@@ -142,6 +135,41 @@ export const authService = {
       return {
         success: true,
         user: result.data?.user,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Network error occurred",
+      };
+    }
+  },
+
+  async refreshAccessToken(): Promise<AuthResponse> {
+    try {
+      const response = await apiFetch(`/auth/refresh-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || "Unable to refresh session",
+        };
+      }
+
+      const accessToken = extractAccessToken(result);
+      if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
+      }
+
+      return {
+        success: true,
+        message: result.message,
+        accessToken,
       };
     } catch (error) {
       return {

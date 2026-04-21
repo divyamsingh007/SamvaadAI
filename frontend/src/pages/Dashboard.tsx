@@ -1,22 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import Hyperspeed from "../components/Hyperspeed";
 import Dock from "../components/Dock";
+import { apiFetch } from "../lib/apiFetch";
 import {
   ArrowLeft, LogOut, BarChart2, Clock, TrendingUp, ChevronRight,
-  Trash2, RefreshCw, User as UserIcon, Award, Target, Zap,
+  Trash2, RefreshCw, Award, Target, Zap,
   AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Star,
   Mic, Shield, Eye, Brain, MessageSquare, Lightbulb, ArrowRight,
 } from "lucide-react";
 
 /* ── design tokens (identical to Home / Signin / Signup) ──────────────── */
-const API = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
-const hdrs = () => {
-  const t = localStorage.getItem("accessToken");
-  return { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) };
-};
 const smooth = { type: "spring" as const, damping: 30, stiffness: 120 };
 const fadeUp = (delay: number) => ({
   hidden: { opacity: 0, y: 24, filter: "blur(6px)" },
@@ -117,7 +113,7 @@ function ResponseCard({ resp, onDelete }: { resp: Resp; onDelete: (id: string) =
   const del = async (e: React.MouseEvent) => {
     e.stopPropagation(); if (!confirm("Delete this result?")) return;
     setDeleting(true);
-    try { const r = await fetch(`${API}/interview-responses/${resp._id}`, { method: "DELETE", headers: hdrs() }); if (r.ok) onDelete(resp._id); } finally { setDeleting(false); }
+    try { const r = await apiFetch(`/interview-responses/${resp._id}`, { method: "DELETE" }); if (r.ok) onDelete(resp._id); } finally { setDeleting(false); }
   };
   return (
     <motion.div layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, overflow: "hidden", marginBottom: "0.75rem" }}>
@@ -197,7 +193,7 @@ function ResponseCard({ resp, onDelete }: { resp: Resp; onDelete: (id: string) =
 /*  DASHBOARD                                                                */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [responses, setResponses] = useState<Resp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,18 +202,25 @@ export default function Dashboard() {
   const [profileForm, setProfileForm] = useState({ firstName: user?.firstName || "", lastName: user?.lastName || "", username: user?.username || "" });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (!user) { navigate("/signin"); return; } fetchData(); }, [user]);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate("/signin");
+      return;
+    }
+    fetchData();
+  }, [authLoading, user, navigate]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     if (!user) return; setLoading(true);
-    try { const r = await fetch(`${API}/interview-responses?userId=${user.id}`, { headers: hdrs() }); const j = await r.json(); if (j.success) setResponses(j.data || []); } catch { } finally { setLoading(false); }
-  }, [user]);
+    try { const r = await apiFetch(`/interview-responses?userId=${user.id}`); const j = await r.json(); if (j.success) setResponses(j.data || []); } catch { } finally { setLoading(false); }
+  };
 
   const delResp = (id: string) => setResponses(p => p.filter(r => r._id !== id));
   const handleLogout = async () => { await logout(); navigate("/"); };
   const handleSaveProfile = async () => {
     setSaving(true); setProfileMsg("");
-    try { const r = await fetch(`${API}/auth/update-profile`, { method: "PUT", headers: hdrs(), body: JSON.stringify(profileForm) }); const j = await r.json(); setProfileMsg(j.success ? "Profile updated!" : (j.message || "Update failed")); } catch { setProfileMsg("Network error"); } finally { setSaving(false); setTimeout(() => setProfileMsg(""), 3000); }
+    try { const r = await apiFetch(`/auth/update-profile`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profileForm) }); const j = await r.json(); setProfileMsg(j.success ? "Profile updated!" : (j.message || "Update failed")); } catch { setProfileMsg("Network error"); } finally { setSaving(false); setTimeout(() => setProfileMsg(""), 3000); }
   };
 
   /* ── analytics ─────────────────────────────────────────────── */
